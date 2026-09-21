@@ -12,6 +12,9 @@
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  /* display を指定したクラスがブラウザ既定の [hidden] を打ち消すので、明示的に勝たせる */
+  [hidden] { display: none !important; }
   html, body { margin: 0; background: var(--bg); }
 
   body {
