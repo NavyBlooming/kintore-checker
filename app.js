@@ -69,6 +69,11 @@
         '<div class="prog-sub" id="progSub">1セットで6マス開きます</div>' +
       '</div>' +
       '<div class="stage" id="stage"></div>' +
+      '<div class="medianav" id="mediaNav" hidden>' +
+        '<button id="prevMedia" aria-label="前へ">‹</button>' +
+        '<span class="pos" id="mediaPos"></span>' +
+        '<button id="nextMedia" aria-label="次へ">›</button>' +
+      '</div>' +
     '</section>' +
 
     '<section class="card">' +
@@ -164,6 +169,8 @@
       skipped: {},
       shifted: {},
       sets: 6,
+      currentId: null,
+      sampleSets: 0,
       debug: false
     };
     try {
@@ -176,6 +183,8 @@
       if (s.skipped && typeof s.skipped === "object") d.skipped = s.skipped;
       if (s.shifted && typeof s.shifted === "object") d.shifted = s.shifted;
       if (SET_CHOICES.indexOf(s.sets) >= 0) d.sets = s.sets;
+      if (typeof s.currentId === "string") d.currentId = s.currentId;
+      if (typeof s.sampleSets === "number") d.sampleSets = s.sampleSets;
       d.debug = !!s.debug;
     } catch (e) {}
     if (DEMO) d.debug = true;
@@ -355,24 +364,78 @@
     return 12;
   }
 
-  // 1枚を開ききった直後は、次の1枚へ進まずに完成した絵を出したままにする
-  function progress() {
-    var total = settings.sets * TILES_PER_SET;
-    var done = totalSets();
-    var all = done * TILES_PER_SET;
-    var idx = Math.floor(all / total);
-    var revealed = all - idx * total;
-    if (revealed === 0 && idx > 0) { idx -= 1; revealed = total; }
-    return { total: total, idx: idx, revealed: revealed };
+  function setsOf(im) { return Math.max(0, Math.min(settings.sets, im.sets || 0)); }
+  function isFull(im) { return setsOf(im) >= settings.sets; }
+
+  // いま表示している素材の位置。開封状況に関係なく前後へ動かせる
+  function currentIndex() {
+    if (!images.length) return -1;
+    for (var i = 0; i < images.length; i++) {
+      if (images[i].id === settings.currentId) return i;
+    }
+    for (var j = 0; j < images.length; j++) {
+      if (!isFull(images[j])) return j;
+    }
+    return 0;
   }
 
-  // 表示対象。登録画像が無いデモではサンプル素材を返す
+  // 開封状況は素材ごとに持つ。表示中のものだけを見る
+  function progress() {
+    var total = settings.sets * TILES_PER_SET;
+    var i = currentIndex();
+    var sets = i < 0 ? Math.max(0, Math.min(settings.sets, settings.sampleSets || 0)) : setsOf(images[i]);
+    return { total: total, idx: i, sets: sets, revealed: sets * TILES_PER_SET };
+  }
+
+  // 表示対象。登録素材が無いデモではサンプルを返す
   function mediaFor(idx) {
-    if (images.length) {
-      return { id: images[Math.min(idx, images.length - 1)].id, rec: images[Math.min(idx, images.length - 1)] };
-    }
+    if (idx >= 0 && images.length) return { id: images[idx].id, rec: images[idx] };
     if (sampleTpl) return { id: "sample", rec: null };
     return null;
+  }
+
+  // セットの増減を、いま表示している素材の開封状況に反映する。
+  // 表示中が開ききっていれば次の未開封へ、0なら手前の開封済みへ自動で移る。
+  function applySetDelta(delta) {
+    if (!images.length) {
+      settings.sampleSets = Math.max(0, Math.min(settings.sets, (settings.sampleSets || 0) + delta));
+      saveSettings();
+      return Promise.resolve();
+    }
+    var i = currentIndex();
+    var j;
+    if (delta > 0) {
+      if (isFull(images[i])) {
+        for (j = 0; j < images.length; j++) if (!isFull(images[j])) { i = j; break; }
+      }
+      if (isFull(images[i])) return Promise.resolve();
+      images[i].sets = setsOf(images[i]) + 1;
+    } else {
+      if (setsOf(images[i]) <= 0) {
+        for (j = i - 1; j >= 0; j--) if (setsOf(images[j]) > 0) { i = j; break; }
+      }
+      if (setsOf(images[i]) <= 0) return Promise.resolve();
+      images[i].sets = setsOf(images[i]) - 1;
+    }
+    settings.currentId = images[i].id;
+    saveSettings();
+    return tx("readwrite", function (s) { return s.put(images[i]); });
+  }
+
+  // 旧版は総セット数から開封状況を計算していた。素材ごとの保持へ一度だけ移す。
+  function migrateSets() {
+    var needs = false;
+    images.forEach(function (im) { if (typeof im.sets !== "number") needs = true; });
+    if (!needs) return Promise.resolve();
+    var remaining = totalSets();
+    var jobs = images.map(function (im) {
+      if (typeof im.sets !== "number") {
+        im.sets = Math.min(remaining, settings.sets);
+        remaining -= im.sets;
+      }
+      return tx("readwrite", function (s) { return s.put(im); });
+    });
+    return Promise.all(jobs);
   }
 
   function mediaHtml(m) {
@@ -384,14 +447,29 @@
     return '<img class="art" src="' + urlFor(m.rec) + '" alt="">';
   }
 
+  function renderMediaNav() {
+    var nav = document.getElementById("mediaNav");
+    if (images.length < 1) { nav.hidden = true; return; }
+    nav.hidden = false;
+    var i = currentIndex();
+    var im = images[i];
+    var st = isFull(im) ? "開封済み" : setsOf(im) > 0 ? "途中" : "未開封";
+    document.getElementById("mediaPos").innerHTML =
+      "<b>" + (i + 1) + "</b> / " + images.length + "　" + st;
+    document.getElementById("prevMedia").disabled = i <= 0;
+    document.getElementById("nextMedia").disabled = i >= images.length - 1;
+  }
+
   function renderReveal() {
     var stage = document.getElementById("stage");
     var p = progress();
     var total = p.total, idx = p.idx, revealed = p.revealed;
-    var setsShown = Math.round(revealed / TILES_PER_SET);
+    var setsShown = p.sets;
 
     document.getElementById("progN").innerHTML =
       setsShown + '<small>/ ' + settings.sets + " セット</small>";
+
+    renderMediaNav();
 
     var m = mediaFor(idx);
     if (!m) {
@@ -401,9 +479,6 @@
       lastRevealed = -1;
       return;
     }
-
-    var overflow = images.length > 0 && idx >= images.length;
-    if (overflow) revealed = total;
 
     var ord = order(m.id, total);
     var posOf = new Array(total);
@@ -444,16 +519,20 @@
         banner.className = "done-banner";
         stage.appendChild(banner);
       }
-      banner.textContent = !m.rec || idx >= images.length - 1
-        ? "全部開ききりました。設定から追加できます"
-        : "完成しました。次のセットから次の1枚へ";
+      var left = 0;
+      images.forEach(function (im) { if (!isFull(im)) left += 1; });
+      banner.textContent = !m.rec || left === 0
+        ? "開ききりました。設定から追加できます"
+        : "開ききりました。次のセットは未開封の1枚へ";
     } else if (banner) {
       banner.remove();
     }
 
+    var rest = 0;
+    images.forEach(function (im) { if (!isFull(im)) rest += 1; });
     document.getElementById("progSub").textContent =
       revealed >= total
-        ? (m.rec ? Math.max(0, images.length - idx - 1) + " 枚が未開封" : "開ききりました")
+        ? (m.rec ? "未開封が " + rest + " 枚" : "開ききりました")
         : "あと " + (settings.sets - setsShown) + " セットで完成";
   }
 
@@ -592,14 +671,17 @@
         (DEMO ? "未登録です。いまはサンプル素材を表示しています。" : "まだ登録されていません。") + "</p>";
       return;
     }
-    var idx = progress().idx;
+    var idx = currentIndex();
     list.innerHTML = images.map(function (im, i) {
-      var st = i < idx ? "開封済み" : i === idx ? "表示中" : "未開封";
+      var n = setsOf(im);
+      var st = (isFull(im) ? "開封済み" : n > 0 ? "途中 " + n + " / " + settings.sets : "未開封") +
+        (i === idx ? "・表示中" : "");
       return '<div class="imgrow' + (i === idx ? " active" : "") + '">' +
         (im.type === "video"
           ? '<div class="thumb" style="filter:none;display:grid;place-items:center;font-size:0.62rem;color:var(--muted)">動画</div>'
           : '<img class="thumb" src="' + urlFor(im) + '" alt="">') +
         '<div class="meta"><b>' + escapeHtml(im.name) + "</b><span>" + st + "</span></div>" +
+        '<button class="act" data-use="' + im.id + '">表示</button>' +
         '<button class="act del" data-del="' + im.id + '">削除</button></div>';
     }).join("");
   }
@@ -674,7 +756,25 @@
     var d = Number(b.dataset.d);
     if (d > 0 && !settings.debug && setsOn(k, moveId) >= 1) return;
     addSet(k, moveId, d);
+    applySetDelta(d).then(renderAll, renderAll);
+  });
+
+  document.getElementById("prevMedia").addEventListener("click", function () {
+    var i = currentIndex();
+    if (i <= 0) return;
+    settings.currentId = images[i - 1].id;
+    saveSettings();
     renderAll();
+    renderImageList();
+  });
+
+  document.getElementById("nextMedia").addEventListener("click", function () {
+    var i = currentIndex();
+    if (i < 0 || i >= images.length - 1) return;
+    settings.currentId = images[i + 1].id;
+    saveSettings();
+    renderAll();
+    renderImageList();
   });
 
   document.getElementById("sessTabs").addEventListener("click", function (e) {
@@ -794,6 +894,7 @@
           blob: f,
           mime: f.type || "",
           type: (f.type || "").indexOf("video") === 0 ? "video" : "image",
+          sets: 0,
           added: Date.now()
         };
         return tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; });
@@ -810,6 +911,14 @@
   });
 
   document.getElementById("imgList").addEventListener("click", function (e) {
+    var use = e.target.closest("[data-use]");
+    if (use) {
+      settings.currentId = use.dataset.use;
+      saveSettings();
+      renderImageList();
+      renderAll();
+      return;
+    }
     var del = e.target.closest("[data-del]");
     if (!del) return;
     var id = del.dataset.del;
@@ -817,6 +926,10 @@
     tx("readwrite", function (s) { return s.delete(id); }).then(function () {
       images = images.filter(function (im) { return im.id !== id; });
       if (urls[id]) { URL.revokeObjectURL(urls[id]); delete urls[id]; }
+      if (settings.currentId === id) {
+        settings.currentId = images.length ? images[0].id : null;
+        saveSettings();
+      }
       delete document.getElementById("stage").dataset.im;
       renderImageList();
       renderAll();
@@ -838,6 +951,8 @@
     return tx("readonly", function (s) { return s.getAll(); });
   }).then(function (recs) {
     images = (recs || []).sort(function (a, b) { return a.added - b.added; });
+    return migrateSets();
+  }).then(function () {
     delete document.getElementById("stage").dataset.im;
     renderReveal();
   }).catch(function () {

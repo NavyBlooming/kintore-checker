@@ -70,6 +70,20 @@
 
   .empty { padding: 42px 18px; text-align: center; color: var(--muted); font-size: 0.87rem; }
 
+  .medianav { display: flex; align-items: center; gap: 9px; margin-top: 11px; }
+  .medianav button {
+    width: 46px; height: 38px; border-radius: 10px;
+    background: var(--panel-2); display: grid; place-items: center;
+    font-size: 1.15rem; line-height: 1; flex: none;
+  }
+  .medianav button:disabled { opacity: 0.28; }
+  .medianav button:active:not(:disabled) { filter: brightness(1.2); }
+  .medianav .pos {
+    flex: 1; text-align: center; font-size: 0.76rem;
+    color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .medianav .pos b { color: var(--text); font-weight: 600; }
+
   /* ---- session ---- */
 
   .sess-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
