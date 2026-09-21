@@ -61,100 +61,15 @@
   .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
   .stage img, .stage video { display: block; width: 100%; height: auto; }
 
-  /* 未開封の領域を覆うぼかし。マスク（未開封の区画だけ）で形を作る */
-  .frost {
+  /* 覆い。ぼかした素材を焼いたものを、なぞった跡だけ削り取る */
+  .stage canvas.cover,
+  .stage canvas.fxlayer {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
-    background: rgba(16, 18, 22, 0.24);
-    -webkit-backdrop-filter: blur(34px) saturate(0.85);
-    backdrop-filter: blur(34px) saturate(0.85);
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    transition: -webkit-backdrop-filter 700ms ease, backdrop-filter 700ms ease;
-  }
-
-  /* ぼかしが使えない環境では不透明の板で覆う */
-  .stage.noblur .frost {
-    background: var(--panel-2);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  /* 区画。ふだんは見えず、開くときだけシールとして現れ、角からめくれて剥がれる */
-  .tiles { position: absolute; inset: 0; display: grid; pointer-events: none; perspective: 900px; }
-  .tile { opacity: 0; }
-
-  .tile.peel {
-    background: rgba(16, 18, 22, 0.24);
-    -webkit-backdrop-filter: blur(34px) saturate(0.85);
-    backdrop-filter: blur(34px) saturate(0.85);
-    border-radius: 1px;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    animation-duration: 520ms;
-    animation-timing-function: cubic-bezier(0.34, 0.62, 0.3, 1);
-    animation-fill-mode: both;
-  }
-
-  /* めくれ始める角を4通りに散らして、手で剥がしたばらつきを出す */
-  .tile.peel.pc0 { transform-origin: 100% 100%; animation-name: peelTL; }
-  .tile.peel.pc1 { transform-origin: 0% 100%;   animation-name: peelTR; }
-  .tile.peel.pc2 { transform-origin: 100% 0%;   animation-name: peelBL; }
-  .tile.peel.pc3 { transform-origin: 0% 0%;     animation-name: peelBR; }
-
-  /* 左上の角が浮いて、右下を支点に剥がれる */
-  @keyframes peelTL {
-    0%   { opacity: 1; transform: rotate3d(1, -1, 0, 0deg);
-           box-shadow: 0 0 0 rgba(0,0,0,0); }
-    26%  { opacity: 1; transform: rotate3d(1, -1, 0, 32deg);
-           box-shadow: 9px 9px 16px rgba(0,0,0,0.42), 0 0 13px rgba(255,110,186,0.72); }
-    74%  { opacity: 0.92; transform: rotate3d(1, -1, 0, 74deg);
-           box-shadow: 17px 17px 25px rgba(0,0,0,0.5), 0 0 18px rgba(255,110,186,0.9); }
-    100% { opacity: 0; transform: rotate3d(1, -1, 0, 98deg);
-           box-shadow: 22px 22px 30px rgba(0,0,0,0), 0 0 0 rgba(255,120,190,0); }
-  }
-  @keyframes peelTR {
-    0%   { opacity: 1; transform: rotate3d(1, 1, 0, 0deg);
-           box-shadow: 0 0 0 rgba(0,0,0,0); }
-    26%  { opacity: 1; transform: rotate3d(1, 1, 0, 32deg);
-           box-shadow: -9px 9px 16px rgba(0,0,0,0.42), 0 0 13px rgba(255,110,186,0.72); }
-    74%  { opacity: 0.92; transform: rotate3d(1, 1, 0, 74deg);
-           box-shadow: -17px 17px 25px rgba(0,0,0,0.5), 0 0 18px rgba(255,110,186,0.9); }
-    100% { opacity: 0; transform: rotate3d(1, 1, 0, 98deg);
-           box-shadow: -22px 22px 30px rgba(0,0,0,0), 0 0 0 rgba(255,120,190,0); }
-  }
-  @keyframes peelBL {
-    0%   { opacity: 1; transform: rotate3d(-1, -1, 0, 0deg);
-           box-shadow: 0 0 0 rgba(0,0,0,0); }
-    26%  { opacity: 1; transform: rotate3d(-1, -1, 0, 32deg);
-           box-shadow: 9px -9px 16px rgba(0,0,0,0.42), 0 0 13px rgba(255,110,186,0.72); }
-    74%  { opacity: 0.92; transform: rotate3d(-1, -1, 0, 74deg);
-           box-shadow: 17px -17px 25px rgba(0,0,0,0.5), 0 0 18px rgba(255,110,186,0.9); }
-    100% { opacity: 0; transform: rotate3d(-1, -1, 0, 98deg);
-           box-shadow: 22px -22px 30px rgba(0,0,0,0), 0 0 0 rgba(255,120,190,0); }
-  }
-  @keyframes peelBR {
-    0%   { opacity: 1; transform: rotate3d(-1, 1, 0, 0deg);
-           box-shadow: 0 0 0 rgba(0,0,0,0); }
-    26%  { opacity: 1; transform: rotate3d(-1, 1, 0, 32deg);
-           box-shadow: -9px -9px 16px rgba(0,0,0,0.42), 0 0 13px rgba(255,110,186,0.72); }
-    74%  { opacity: 0.92; transform: rotate3d(-1, 1, 0, 74deg);
-           box-shadow: -17px -17px 25px rgba(0,0,0,0.5), 0 0 18px rgba(255,110,186,0.9); }
-    100% { opacity: 0; transform: rotate3d(-1, 1, 0, 98deg);
-           box-shadow: -22px -22px 30px rgba(0,0,0,0), 0 0 0 rgba(255,120,190,0); }
-  }
-
-  /* ぼかしが使えない環境では不透明のシールとして剥がれる */
-  .stage.noblur .tile.peel {
-    background: var(--panel-2);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .tile.peel { animation-duration: 1ms; }
-    .frost { transition: none; }
+    display: block;
   }
 
   .done-banner {
