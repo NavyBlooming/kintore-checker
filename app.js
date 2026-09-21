@@ -374,6 +374,8 @@
   // 隣り合う矩形がその1ピクセルを半分ずつしか塗らないため、覆いが薄い筋になって残る
   // （縦に長い画像で目立つ）。境界を BLEED 分だけ重ねて塗り残しをなくす。
   var BLEED = 1;
+  var PEEL_STEP = 460;  // 演出は520ms。少しだけ重ねて途切れないようにする
+  var frostBlur = "blur(34px) saturate(0.85)";
 
   function frostMask(cols, rows, closed, w, h) {
     var imgs = [], sizes = [], poss = [];
@@ -413,8 +415,9 @@
 
     // 進むほど残りのぼかしも少しずつ弱める
     var px = Math.round(34 - 10 * ratio);
-    frost.style.webkitBackdropFilter = "blur(" + px + "px) saturate(0.85)";
-    frost.style.backdropFilter = "blur(" + px + "px) saturate(0.85)";
+    frostBlur = "blur(" + px + "px) saturate(0.85)";
+    frost.style.webkitBackdropFilter = frostBlur;
+    frost.style.backdropFilter = frostBlur;
   }
 
   // 素材の読み込みや画面の回転で大きさが変わったら、マスクを組み直す
@@ -584,8 +587,10 @@
 
     // まず演出をすべて解除し、1回だけ再計算させてから付け直す
     for (var j = 0; j < total; j++) {
-      tiles.children[j].classList.remove("mist");
+      tiles.children[j].classList.remove("peel", "pc0", "pc1", "pc2", "pc3");
       tiles.children[j].style.animationDelay = "";
+      tiles.children[j].style.webkitBackdropFilter = "";
+      tiles.children[j].style.backdropFilter = "";
     }
     void tiles.offsetWidth;
 
@@ -594,8 +599,11 @@
       var el = tiles.children[k];
       if (open[k]) {
         if (stagger && posOf[k] >= lastRevealed) {
-          el.style.animationDelay = Math.min((posOf[k] - lastRevealed) * 130, 2400) + "ms";
-          el.classList.add("mist");
+          // 1枚がめくれ終わってから次が始まるよう、演出の長さぶんずらす
+          el.style.animationDelay = Math.min((posOf[k] - lastRevealed) * PEEL_STEP, 6000) + "ms";
+          el.style.webkitBackdropFilter = frostBlur;
+          el.style.backdropFilter = frostBlur;
+          el.classList.add("peel", "pc" + (k % 4));
         }
       } else {
         closed.push(k);
