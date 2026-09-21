@@ -16,6 +16,9 @@
   var DOW = ["日", "月", "火", "水", "木", "金", "土"];
   var TILES_PER_SET = 6;
   var SET_CHOICES = [6, 12, 24];
+  var INTERVAL_CHOICES = [1, 2, 3];
+  var INTERVAL_LABEL = { 1: "毎日", 2: "隔日", 3: "3日に1回" };
+  var DAY_MS = 86400000;
   var SUFFIX = DEMO ? ".demo" : "";
   var LS_SETTINGS = "wt.settings.v3" + SUFFIX;
   var LS_LOG = "wt.log.v3" + SUFFIX;
@@ -105,9 +108,16 @@
           '</div>' +
         '</div>' +
         '<div class="field">' +
-          '<label>トレーニングする曜日</label>' +
-          '<div class="dow-picker" id="dowPicker"></div>' +
-          '<p class="note" style="margin-top:8px">選んだ曜日に、胸 → 脚 → 背中 の順でメニューが割り当てられます。</p>' +
+          '<label>スケジュール</label>' +
+          '<div class="seg" id="modeSeg"></div>' +
+          '<div id="weeklyBox" style="margin-top:9px">' +
+            '<div class="dow-picker" id="dowPicker"></div>' +
+            '<p class="note" style="margin-top:8px">選んだ曜日に、胸 → 脚 → 背中 の順でメニューが割り当てられます。</p>' +
+          '</div>' +
+          '<div id="intervalBox" style="margin-top:9px">' +
+            '<div class="seg" id="intervalSeg"></div>' +
+            '<p class="note" id="anchorNote" style="margin-top:8px"></p>' +
+          '</div>' +
         '</div>' +
         '<div class="field">' +
           '<label>1枚あたりのセット数</label>' +
@@ -144,10 +154,27 @@
   /* ---------- storage ---------- */
 
   function loadSettings() {
-    var d = { days: [1, 3, 5], sets: 6, debug: false };
+    var t = new Date();
+    var d = {
+      mode: "weekly",
+      days: [1, 3, 5],
+      interval: 2,
+      anchor: t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()),
+      moved: {},
+      skipped: {},
+      shifted: {},
+      sets: 6,
+      debug: false
+    };
     try {
       var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
+      if (s.mode === "interval" || s.mode === "weekly") d.mode = s.mode;
       if (Array.isArray(s.days) && s.days.length) d.days = s.days;
+      if (INTERVAL_CHOICES.indexOf(s.interval) >= 0) d.interval = s.interval;
+      if (typeof s.anchor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.anchor)) d.anchor = s.anchor;
+      if (s.moved && typeof s.moved === "object") d.moved = s.moved;
+      if (s.skipped && typeof s.skipped === "object") d.skipped = s.skipped;
+      if (s.shifted && typeof s.shifted === "object") d.shifted = s.shifted;
       if (SET_CHOICES.indexOf(s.sets) >= 0) d.sets = s.sets;
       d.debug = !!s.debug;
     } catch (e) {}
@@ -195,15 +222,80 @@
 
   function plannedDays() { return settings.days.slice().sort(function (a, b) { return a - b; }); }
 
-  function sessionFor(date) {
-    var days = plannedDays();
-    var i = days.indexOf(date.getDay());
-    if (i < 0) return null;
-    return SESSIONS[i % SESSIONS.length];
-  }
   function sessionById(id) {
     for (var i = 0; i < SESSIONS.length; i++) if (SESSIONS[i].id === id) return SESSIONS[i];
     return SESSIONS[0];
+  }
+
+  function dayDiff(fromDateKey, date) {
+    return Math.round((date - fromKey(fromDateKey)) / DAY_MS);
+  }
+
+  function addDays(date, n) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + n);
+  }
+
+  // その日のメニュー。トレーニング日でなければ null
+  function sessionFor(date) {
+    var k = key(date);
+    if (settings.moved[k]) return sessionById(settings.moved[k]);
+    if (settings.skipped[k]) return null;
+
+    if (settings.mode === "interval") {
+      var n = dayDiff(settings.anchor, date);
+      var iv = settings.interval;
+      if (((n % iv) + iv) % iv !== 0) return null;
+      var idx = Math.floor(n / iv);
+      return SESSIONS[((idx % SESSIONS.length) + SESSIONS.length) % SESSIONS.length];
+    }
+
+    var days = plannedDays();
+    var p = days.indexOf(date.getDay());
+    if (p < 0) return null;
+    return SESSIONS[p % SESSIONS.length];
+  }
+
+  // 前日が未実施のトレーニング日で、今日が休養日なら繰り上げられる
+  function shiftable() {
+    var t = today();
+    if (sessionFor(t)) return null;
+    var y = addDays(t, -1);
+    var ys = sessionFor(y);
+    if (!ys) return null;
+    if (daySets(key(y)) > 0) return null;
+    return { yesterday: y, session: ys };
+  }
+
+  function shiftedToday() { return !!settings.shifted[key(today())]; }
+
+  function doShift() {
+    var c = shiftable();
+    if (!c) return;
+    var tk = key(today());
+    if (settings.mode === "interval") {
+      settings.anchor = key(addDays(fromKey(settings.anchor), 1));
+    } else {
+      settings.moved[tk] = c.session.id;
+      settings.skipped[key(c.yesterday)] = true;
+    }
+    settings.shifted[tk] = settings.mode === "interval" ? "interval" : key(c.yesterday);
+    saveSettings();
+    renderAll();
+  }
+
+  function undoShift() {
+    var tk = key(today());
+    var mark = settings.shifted[tk];
+    if (!mark) return;
+    if (mark === "interval") {
+      settings.anchor = key(addDays(fromKey(settings.anchor), -1));
+    } else {
+      delete settings.moved[tk];
+      delete settings.skipped[mark];
+    }
+    delete settings.shifted[tk];
+    saveSettings();
+    renderAll();
   }
 
   /* ---------- sets ---------- */
@@ -397,12 +489,26 @@
 
     if (!sess) {
       document.getElementById("sessTitle").textContent = "休養日";
-      moves.innerHTML = '<p class="rest">今日は予定日ではありません。<b>筋肉は休んでいる間に育ちます。</b><br>' +
-        "予定日以外に行った分を記録したい場合は、設定のデバッグモードから入力できます。</p>";
+      var sh = shiftable();
+      var html = '<p class="rest">今日は予定日ではありません。<b>筋肉は休んでいる間に育ちます。</b></p>';
+      if (sh) {
+        html += '<p class="rest" style="margin-top:10px">' +
+          "前日の" + sh.session.label + "が未実施です。今日にずらせます。</p>" +
+          '<div class="ctl" style="margin-top:9px">' +
+          '<button class="wide plus" id="shiftBtn">今日にずらす</button></div>';
+      } else if (!settings.debug) {
+        html += '<p class="rest" style="margin-top:10px">' +
+          "予定日以外に行った分を記録したい場合は、設定のデバッグモードから入力できます。</p>";
+      }
+      moves.innerHTML = html;
+      var sb = document.getElementById("shiftBtn");
+      if (sb) sb.addEventListener("click", doShift);
       return;
     }
 
-    document.getElementById("sessTitle").textContent = sess.label + "（" + sess.moves.length + "セット）";
+    document.getElementById("sessTitle").textContent =
+      sess.label + "（" + sess.moves.length + "セット）" +
+      (key(date) === key(today()) && shiftedToday() ? " ・繰り上げ" : "");
 
     moves.innerHTML = sess.moves.map(function (m) {
       var n = setsOn(k, m.id);
@@ -424,6 +530,13 @@
         '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
         '<div class="ctl">' + ctl + "</div></div>";
     }).join("");
+
+    if (key(date) === key(today()) && shiftedToday() && daySets(k) === 0) {
+      moves.innerHTML += '<p class="rest" style="margin-top:14px">' +
+        '<button id="undoShiftBtn" style="color:var(--muted);text-decoration:underline;font-size:0.78rem">' +
+        "繰り上げを取り消す</button></p>";
+      document.getElementById("undoShiftBtn").addEventListener("click", undoShift);
+    }
   }
 
   /* ---------- calendar ---------- */
@@ -499,19 +612,39 @@
       document.getElementById("debugSwitch").classList.toggle("on", settings.debug);
     }
 
+    var weekly = settings.mode === "weekly";
+
+    document.getElementById("modeSeg").innerHTML =
+      '<button data-mode="weekly" class="' + (weekly ? "on" : "") + '">曜日で決める</button>' +
+      '<button data-mode="interval" class="' + (weekly ? "" : "on") + '">日数で決める</button>';
+
+    document.getElementById("weeklyBox").hidden = !weekly;
+    document.getElementById("intervalBox").hidden = weekly;
+
     document.getElementById("dowPicker").innerHTML = DOW.map(function (d, i) {
       return '<button data-dow="' + i + '" class="' + (settings.days.indexOf(i) >= 0 ? "on" : "") + '">' + d + "</button>";
     }).join("");
+
+    document.getElementById("intervalSeg").innerHTML = INTERVAL_CHOICES.map(function (n) {
+      return '<button data-interval="' + n + '" class="' + (settings.interval === n ? "on" : "") + '">' +
+        INTERVAL_LABEL[n] + "</button>";
+    }).join("");
+
+    var a = fromKey(settings.anchor);
+    document.getElementById("anchorNote").textContent =
+      "曜日に関係なく " + INTERVAL_LABEL[settings.interval] + " のペースで、胸 → 脚 → 背中 を順に回します。" +
+      "起点は " + (a.getMonth() + 1) + "月" + a.getDate() + "日です。繰り上げるたびに起点がずれます。";
 
     document.getElementById("setSeg").innerHTML = SET_CHOICES.map(function (n) {
       return '<button data-sets="' + n + '" class="' + (settings.sets === n ? "on" : "") + '">' + n + "</button>";
     }).join("");
 
     var perSession = 3;
+    var sessions = Math.ceil(settings.sets / perSession);
     document.getElementById("setNote").textContent =
       "1セットで " + TILES_PER_SET + " マス、合計 " + (settings.sets * TILES_PER_SET) +
-      " マス。1回のトレーニングで " + perSession + " セットなので、約 " +
-      Math.ceil(settings.sets / perSession) + " 回で1枚が完成します。";
+      " マス。1回のトレーニングで " + perSession + " セットなので、約 " + sessions + " 回" +
+      (weekly ? "" : "（約 " + sessions * settings.interval + " 日）") + "で1枚が完成します。";
 
     renderImageList();
   }
@@ -597,6 +730,25 @@
       renderAll();
     });
   }
+
+  document.getElementById("modeSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-mode]");
+    if (!b) return;
+    settings.mode = b.dataset.mode;
+    if (settings.mode === "interval") settings.anchor = key(today());
+    saveSettings();
+    renderSettings();
+    renderAll();
+  });
+
+  document.getElementById("intervalSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-interval]");
+    if (!b) return;
+    settings.interval = Number(b.dataset.interval);
+    saveSettings();
+    renderSettings();
+    renderAll();
+  });
 
   document.getElementById("dowPicker").addEventListener("click", function (e) {
     var b = e.target.closest("[data-dow]");
