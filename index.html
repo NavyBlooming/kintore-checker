@@ -18,13 +18,11 @@
     --muted: #949cab;
     --accent: #4ec9a5;
     --accent-ink: #0d1512;
+    --warn: #e3b341;
     --danger: #e0645a;
-    --pad-top: env(safe-area-inset-top, 0px);
-    --pad-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
   html, body { margin: 0; background: var(--bg); }
 
   body {
@@ -32,272 +30,228 @@
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
     font-size: 16px;
     line-height: 1.6;
-    padding: calc(16px + var(--pad-top)) 16px calc(32px + var(--pad-bottom));
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(32px + env(safe-area-inset-bottom, 0px));
     max-width: 560px;
     margin: 0 auto;
     -webkit-text-size-adjust: 100%;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  h1 { font-size: 1.1rem; margin: 0; font-weight: 700; letter-spacing: 0.02em; }
-
-  button {
-    font: inherit;
-    color: inherit;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
+  h1 { font-size: 1.05rem; margin: 0; font-weight: 700; }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 
   .topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 18px;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .topbar .spacer { flex: 1; }
+
+  .debug-flag {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: 999px;
+    padding: 1px 9px;
   }
 
   .icon-btn {
-    width: 38px;
-    height: 38px;
+    width: 36px; height: 36px;
     border-radius: 10px;
     background: var(--panel);
-    display: grid;
-    place-items: center;
-    font-size: 1.1rem;
-    line-height: 1;
+    display: grid; place-items: center;
+    font-size: 1.05rem; line-height: 1;
+    flex: none;
   }
   .icon-btn:active { background: var(--panel-2); }
 
-  .card {
-    background: var(--panel);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
+  .card { background: var(--panel); border-radius: 16px; padding: 14px; margin-bottom: 14px; }
 
-  /* ---- reveal panel ---- */
+  /* ---- reveal ---- */
 
-  .reveal-head {
+  .prog {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 11px;
   }
-  .reveal-count {
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    font-size: 1.35rem;
-    letter-spacing: 0.01em;
-  }
-  .reveal-count small { font-weight: 400; font-size: 0.8rem; color: var(--muted); margin-left: 4px; }
-  .reveal-label { font-size: 0.8rem; color: var(--muted); }
+  .prog-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.3rem; }
+  .prog-n small { font-weight: 400; font-size: 0.78rem; color: var(--muted); margin-left: 3px; }
+  .prog-sub { font-size: 0.76rem; color: var(--muted); text-align: right; }
 
-  .stage {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    background: var(--panel-2);
-  }
-  .stage img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-  .tiles {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    pointer-events: none;
-  }
-  .tile {
-    background: var(--panel-2);
-    border: 0.5px solid rgba(0,0,0,0.35);
-    transition: opacity 420ms ease;
-  }
+  .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
+  .stage img, .stage video { display: block; width: 100%; height: auto; }
+
+  .tiles { position: absolute; inset: 0; display: grid; pointer-events: none; }
+  .tile { background: var(--panel-2); transition: opacity 500ms ease; }
   .tile.open { opacity: 0; }
-
-  .empty {
-    padding: 44px 20px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.9rem;
-  }
 
   .done-banner {
     position: absolute;
     left: 0; right: 0; bottom: 0;
-    padding: 12px 14px;
-    background: rgba(20, 22, 26, 0.86);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 0.88rem;
+    padding: 10px 14px;
+    background: rgba(20,22,26,0.88);
+    font-size: 0.85rem;
+    text-align: center;
   }
+
+  .empty { padding: 42px 18px; text-align: center; color: var(--muted); font-size: 0.87rem; }
+
+  /* ---- session ---- */
+
+  .sess-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .sess-title { font-weight: 700; font-size: 0.98rem; }
+  .sess-date { font-size: 0.76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .tabs { display: flex; gap: 5px; margin-bottom: 12px; }
+  .tabs button {
+    flex: 1;
+    padding: 7px 0;
+    border-radius: 8px;
+    background: var(--panel-2);
+    font-size: 0.78rem;
+  }
+  .tabs button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+  .move { padding: 12px 0; border-top: 1px solid var(--line); }
+  .move:first-of-type { border-top: none; padding-top: 0; }
+  .move-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 9px;
+  }
+  .move-name { font-weight: 500; font-size: 0.93rem; }
+  .move-note { font-size: 0.72rem; color: var(--muted); }
+  .move-n {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.05rem;
+    flex: none;
+  }
+  .move-n.full { color: var(--accent); }
+  .move-n small { font-weight: 400; font-size: 0.74rem; color: var(--muted); }
+
+  .ctl { display: flex; gap: 6px; }
+  .ctl button {
+    border-radius: 10px;
+    background: var(--panel-2);
+    padding: 12px 0;
+    font-size: 0.88rem;
+    font-weight: 500;
+  }
+  .ctl .minus { width: 52px; color: var(--muted); }
+  .ctl .plus { flex: 1; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .ctl .set { width: 92px; }
+  .ctl button:disabled { opacity: 0.32; }
+  .ctl button:active:not(:disabled) { filter: brightness(1.18); }
+
+  .rest { color: var(--muted); font-size: 0.85rem; }
+  .rest b { color: var(--text); font-weight: 500; }
 
   /* ---- calendar ---- */
 
-  .cal-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .cal-title { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .nav { display: flex; gap: 6px; }
-  .nav button {
-    width: 34px; height: 34px;
-    border-radius: 9px;
-    background: var(--panel-2);
-    display: grid; place-items: center;
-  }
-  .nav button:active { background: var(--line); }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+  .cal-title { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+  .nav { display: flex; gap: 5px; }
+  .nav button { width: 32px; height: 32px; border-radius: 8px; background: var(--panel-2); display: grid; place-items: center; }
 
-  .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-
-  .dow {
-    text-align: center;
-    font-size: 0.7rem;
-    color: var(--muted);
-    padding-bottom: 4px;
-  }
+  .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .dow { text-align: center; font-size: 0.68rem; color: var(--muted); padding-bottom: 3px; }
   .dow.sun { color: #e0857d; }
   .dow.sat { color: #7da8e0; }
 
   .day {
     aspect-ratio: 1;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    border-radius: 9px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
     gap: 2px;
-    font-size: 0.86rem;
+    font-size: 0.82rem;
     font-variant-numeric: tabular-nums;
-    background: transparent;
     color: var(--muted);
     position: relative;
   }
   .day.pad { visibility: hidden; }
   .day.in { color: var(--text); }
   .day.planned { background: var(--panel-2); }
+  .day.part { background: #2f5a4c; }
+  .day.full { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .day.sel { box-shadow: inset 0 0 0 2px var(--warn); }
   .day.today { box-shadow: inset 0 0 0 1.5px var(--muted); }
-  .day.done {
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-weight: 700;
-  }
-  .day.done.today { box-shadow: inset 0 0 0 1.5px var(--text); }
-  .day:disabled { opacity: 0.45; }
-  .dot {
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: var(--muted);
-  }
-  .day.done .dot { background: var(--accent-ink); }
-  .day.planned:not(.done) .dot { background: var(--accent); }
+  .day.full.today { box-shadow: inset 0 0 0 1.5px var(--text); }
+  .day.sel.today { box-shadow: inset 0 0 0 2px var(--warn); }
+  .day .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+  .day.full .dot, .day.part .dot { background: rgba(255,255,255,0.7); }
 
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
-    margin-top: 12px;
-    font-size: 0.72rem;
-    color: var(--muted);
-  }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .swatch { width: 11px; height: 11px; border-radius: 4px; display: inline-block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: 10px; font-size: 0.7rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 
   /* ---- sheet ---- */
 
-  .sheet-bg {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    display: none;
-    align-items: flex-end;
-    z-index: 20;
-  }
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-end; z-index: 20; }
   .sheet-bg.open { display: flex; }
   .sheet {
     background: var(--panel);
-    width: 100%;
-    max-width: 560px;
-    margin: 0 auto;
+    width: 100%; max-width: 560px; margin: 0 auto;
     border-radius: 18px 18px 0 0;
-    padding: 20px 16px calc(24px + var(--pad-bottom));
-    max-height: 88vh;
-    overflow-y: auto;
+    padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+    max-height: 88vh; overflow-y: auto;
   }
-  .sheet h2 { font-size: 0.95rem; margin: 0 0 14px; }
+  .sheet h2 { font-size: 0.93rem; margin: 0 0 16px; }
   .field { margin-bottom: 22px; }
-  .field > label {
-    display: block;
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
+  .field > label { display: block; font-size: 0.76rem; color: var(--muted); margin-bottom: 8px; }
 
-  .dow-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-  .dow-picker button {
-    padding: 9px 0;
-    border-radius: 9px;
-    background: var(--panel-2);
-    font-size: 0.82rem;
-    text-align: center;
-  }
+  .dow-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .dow-picker button { padding: 9px 0; border-radius: 8px; background: var(--panel-2); font-size: 0.8rem; }
   .dow-picker button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
-  .seg { display: flex; gap: 6px; }
-  .seg button {
-    flex: 1;
-    padding: 9px 0;
-    border-radius: 9px;
-    background: var(--panel-2);
-    font-size: 0.85rem;
-    font-variant-numeric: tabular-nums;
-  }
+  .seg { display: flex; gap: 5px; }
+  .seg button { flex: 1; padding: 9px 0; border-radius: 8px; background: var(--panel-2); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
   .seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
-  .btn {
-    display: block;
-    width: 100%;
-    padding: 13px;
-    border-radius: 11px;
+  .toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
     background: var(--panel-2);
-    text-align: center;
-    font-size: 0.9rem;
+    border-radius: 11px;
+    padding: 12px 14px;
   }
+  .toggle .lab { font-size: 0.86rem; }
+  .toggle .lab small { display: block; color: var(--muted); font-size: 0.72rem; line-height: 1.6; }
+  .switch { width: 50px; height: 30px; border-radius: 999px; background: var(--line); position: relative; flex: none; transition: background 160ms; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text); transition: transform 160ms; }
+  .switch.on { background: var(--warn); }
+  .switch.on::after { transform: translateX(20px); }
+
+  .btn { display: block; width: 100%; padding: 13px; border-radius: 11px; background: var(--panel-2); text-align: center; font-size: 0.88rem; }
   .btn.primary { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
   .btn.quiet { color: var(--muted); }
   .btn:active { filter: brightness(1.15); }
 
-  .imglist { display: flex; flex-direction: column; gap: 8px; }
-  .imgrow {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    background: var(--panel-2);
-    border-radius: 11px;
-    padding: 8px 10px;
-  }
-  .imgrow .thumb {
-    width: 42px; height: 42px;
-    border-radius: 7px;
-    background: var(--line);
-    object-fit: cover;
-    flex: none;
-    filter: blur(7px);
-  }
-  .imgrow .meta { flex: 1; min-width: 0; font-size: 0.8rem; }
+  .imglist { display: flex; flex-direction: column; gap: 7px; }
+  .imgrow { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border-radius: 10px; padding: 7px 9px; }
+  .imgrow .thumb { width: 40px; height: 40px; border-radius: 6px; background: var(--line); object-fit: cover; flex: none; filter: blur(7px); }
+  .imgrow .meta { flex: 1; min-width: 0; font-size: 0.78rem; }
   .imgrow .meta b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .imgrow .meta span { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.74rem; }
+  .imgrow .meta span { color: var(--muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
   .imgrow.active { box-shadow: inset 0 0 0 1.5px var(--accent); }
-  .imgrow .act { font-size: 0.74rem; color: var(--muted); padding: 6px; }
+  .imgrow .act { font-size: 0.72rem; color: var(--muted); padding: 6px 4px; }
   .imgrow .act.del { color: var(--danger); }
 
-  .note { font-size: 0.74rem; color: var(--muted); line-height: 1.7; }
+  .note { font-size: 0.72rem; color: var(--muted); line-height: 1.7; }
 
   input[type="file"] { display: none; }
 </style>
@@ -306,21 +260,28 @@
 
 <div class="topbar">
   <h1>kintore-checker</h1>
+  <span class="debug-flag" id="debugFlag" hidden>DEBUG</span>
+  <span class="spacer"></span>
   <button class="icon-btn" id="openSettings" aria-label="設定">⚙</button>
 </div>
 
 <section class="card">
-  <div class="reveal-head">
-    <div>
-      <div class="reveal-count" id="revealCount">0<small id="revealTotal">/ 24</small></div>
-      <div class="reveal-label" id="revealLabel">達成すると1マス開きます</div>
-    </div>
+  <div class="prog">
+    <div class="prog-n" id="progN">0<small>/ 150</small></div>
+    <div class="prog-sub" id="progSub">レップごとに1マス開きます</div>
   </div>
   <div class="stage" id="stage">
-    <div class="empty" id="stageEmpty">
-      画像がまだありません。<br>右上の設定から追加してください。
-    </div>
+    <div class="empty">画像がまだありません。<br>右上の設定から追加してください。</div>
   </div>
+</section>
+
+<section class="card" id="sessCard">
+  <div class="sess-head">
+    <div class="sess-title" id="sessTitle">—</div>
+    <div class="sess-date" id="sessDate"></div>
+  </div>
+  <div class="tabs" id="sessTabs" hidden></div>
+  <div id="moves"></div>
 </section>
 
 <section class="card">
@@ -336,8 +297,8 @@
   <div class="grid7" id="calGrid"></div>
   <div class="legend">
     <span><i class="swatch" style="background:var(--panel-2)"></i>予定日</span>
+    <span><i class="swatch" style="background:#2f5a4c"></i>途中</span>
     <span><i class="swatch" style="background:var(--accent)"></i>達成</span>
-    <span>日付をタップで切り替え</span>
   </div>
 </section>
 
@@ -346,23 +307,33 @@
     <h2>設定</h2>
 
     <div class="field">
+      <div class="toggle">
+        <div class="lab">デバッグモード<small>任意の日・任意の種目を自由に増減できます。通常は切っておいてください。</small></div>
+        <button class="switch" id="debugSwitch" aria-label="デバッグモード"></button>
+      </div>
+    </div>
+
+    <div class="field">
       <label>トレーニングする曜日</label>
       <div class="dow-picker" id="dowPicker"></div>
+      <p class="note" style="margin-top:8px">選んだ曜日に、胸 → 脚 → 背中 の順でメニューが割り当てられます。</p>
     </div>
 
     <div class="field">
-      <label>1枚あたりのマス数</label>
+      <label>1枚あたりのレップ数（マス数）</label>
       <div class="seg" id="tileSeg"></div>
+      <p class="note" id="tileNote" style="margin-top:8px"></p>
     </div>
 
     <div class="field">
-      <label>画像</label>
+      <label>画像・動画</label>
       <div class="imglist" id="imgList"></div>
-      <button class="btn primary" id="addImage" style="margin-top:10px">画像を追加</button>
-      <input type="file" id="fileInput" accept="image/*" multiple>
+      <button class="btn primary" id="addImage" style="margin-top:9px">追加する</button>
+      <input type="file" id="fileInput" accept="image/*,video/*" multiple>
       <p class="note">
-        画像はこの端末の中だけに保存されます。どこにも送信されません。
-        ブラウザのデータを消すと画像も消えるので、元の画像は端末に残しておいてください。
+        この端末の中だけに保存され、どこにも送信されません。
+        ブラウザのデータを消すと一緒に消えるので、元のファイルは端末に残しておいてください。
+        動画は端末によって再生できない場合があります。
       </p>
     </div>
 
@@ -375,47 +346,69 @@
   "use strict";
 
   var DOW = ["日", "月", "火", "水", "木", "金", "土"];
-  var TILE_CHOICES = [12, 24, 48];
-  var LS_SETTINGS = "wt.settings.v1";
-  var LS_CHECKS = "wt.checks.v1";
+  var TILE_CHOICES = [60, 150, 300];
+  var LS_SETTINGS = "wt.settings.v2";
+  var LS_LOG = "wt.log.v2";
+
+  var ABS = { id: "abs", name: "ニートゥチェスト", target: 10, note: "腹。どの回でも最後に" };
+
+  var SESSIONS = [
+    {
+      id: "chest", label: "胸の日",
+      moves: [
+        { id: "pushup", name: "腕立て伏せ", target: 10, note: "きつければ膝をついて" },
+        { id: "kickback", name: "キックバック", target: 20, note: "左右10回ずつ。ペットボトルを持つ" },
+        ABS
+      ]
+    },
+    {
+      id: "legs", label: "脚の日",
+      moves: [
+        { id: "squat", name: "スクワット", target: 10, note: "椅子に座って立つ動作から" },
+        { id: "calf", name: "カーフレイズ", target: 15, note: "かかとの上げ下げ" },
+        ABS
+      ]
+    },
+    {
+      id: "back", label: "背中の日",
+      moves: [
+        { id: "row", name: "ベントオーバーローイング", target: 20, note: "左右10回ずつ。ペットボトルを持つ" },
+        { id: "backext", name: "バックエクステンション", target: 10, note: "うつ伏せから上体を反らす" },
+        ABS
+      ]
+    }
+  ];
 
   var settings = loadSettings();
-  var checks = loadChecks();
+  var log = loadLog();
   var images = [];
   var urls = {};
-  var viewYear, viewMonth;
-
   var db = null;
+  var lastRevealed = -1;
+  var selDate = null;
+  var selSession = null;
+  var viewYear, viewMonth;
 
   /* ---------- storage ---------- */
 
   function loadSettings() {
-    var d = { days: [1, 3, 5], tiles: 24, currentId: null };
+    var d = { days: [1, 3, 5], tiles: 150, debug: false };
     try {
-      var raw = localStorage.getItem(LS_SETTINGS);
-      if (raw) {
-        var s = JSON.parse(raw);
-        if (Array.isArray(s.days)) d.days = s.days;
-        if (TILE_CHOICES.indexOf(s.tiles) >= 0) d.tiles = s.tiles;
-        if (s.currentId) d.currentId = s.currentId;
-      }
+      var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
+      if (Array.isArray(s.days) && s.days.length) d.days = s.days;
+      if (TILE_CHOICES.indexOf(s.tiles) >= 0) d.tiles = s.tiles;
+      d.debug = !!s.debug;
     } catch (e) {}
     return d;
   }
-
   function saveSettings() {
     try { localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); } catch (e) {}
   }
-
-  function loadChecks() {
-    try {
-      var raw = localStorage.getItem(LS_CHECKS);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) { return {}; }
+  function loadLog() {
+    try { return JSON.parse(localStorage.getItem(LS_LOG) || "{}"); } catch (e) { return {}; }
   }
-
-  function saveChecks() {
-    try { localStorage.setItem(LS_CHECKS, JSON.stringify(checks)); } catch (e) {}
+  function saveLog() {
+    try { localStorage.setItem(LS_LOG, JSON.stringify(log)); } catch (e) {}
   }
 
   function openDB() {
@@ -423,74 +416,91 @@
       var req = indexedDB.open("workout-tracker", 1);
       req.onupgradeneeded = function () {
         var d = req.result;
-        if (!d.objectStoreNames.contains("images")) {
-          d.createObjectStore("images", { keyPath: "id" });
-        }
+        if (!d.objectStoreNames.contains("images")) d.createObjectStore("images", { keyPath: "id" });
       };
       req.onsuccess = function () { resolve(req.result); };
       req.onerror = function () { reject(req.error); };
     });
   }
-
   function tx(mode, fn) {
     return new Promise(function (resolve, reject) {
       var t = db.transaction("images", mode);
-      var store = t.objectStore("images");
-      var out = fn(store);
+      var out = fn(t.objectStore("images"));
       t.oncomplete = function () { resolve(out && out.result !== undefined ? out.result : out); };
       t.onerror = function () { reject(t.error); };
     });
   }
 
-  function allImages() {
-    return tx("readonly", function (s) { return s.getAll(); });
-  }
-
-  function putImage(rec) {
-    return tx("readwrite", function (s) { return s.put(rec); });
-  }
-
-  function delImage(id) {
-    return tx("readwrite", function (s) { return s.delete(id); });
-  }
-
   /* ---------- dates ---------- */
 
-  function key(d) {
-    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
-  }
-
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function key(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function today() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+  function fromKey(k) { var p = k.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
 
-  function today() {
-    var t = new Date();
-    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  /* ---------- session mapping ---------- */
+
+  function plannedDays() { return settings.days.slice().sort(function (a, b) { return a - b; }); }
+
+  function sessionFor(date) {
+    var days = plannedDays();
+    var i = days.indexOf(date.getDay());
+    if (i < 0) return null;
+    return SESSIONS[i % SESSIONS.length];
   }
 
-  /* ---------- reveal order ---------- */
+  function sessionById(id) {
+    for (var i = 0; i < SESSIONS.length; i++) if (SESSIONS[i].id === id) return SESSIONS[i];
+    return SESSIONS[0];
+  }
+
+  /* ---------- reps ---------- */
+
+  function repsOn(k, moveId) {
+    return (log[k] && log[k][moveId]) || 0;
+  }
+
+  function dayTotal(k) {
+    var o = log[k], n = 0;
+    if (!o) return 0;
+    for (var m in o) if (Object.prototype.hasOwnProperty.call(o, m)) n += o[m];
+    return n;
+  }
+
+  function dayTarget(date) {
+    var s = sessionFor(date);
+    if (!s) return 0;
+    return s.moves.reduce(function (a, m) { return a + m.target; }, 0);
+  }
+
+  function totalReps() {
+    var n = 0;
+    for (var k in log) if (Object.prototype.hasOwnProperty.call(log, k)) n += dayTotal(k);
+    return n;
+  }
+
+  function addRep(k, moveId, delta) {
+    if (!log[k]) log[k] = {};
+    var v = (log[k][moveId] || 0) + delta;
+    if (v <= 0) delete log[k][moveId]; else log[k][moveId] = v;
+    if (!Object.keys(log[k]).length) delete log[k];
+    saveLog();
+  }
+
+  /* ---------- images ---------- */
 
   function order(id, total) {
     var seed = 0;
     for (var i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+    seed = (seed + total) >>> 0;
     var arr = [];
     for (var j = 0; j < total; j++) arr.push(j);
     for (var k = total - 1; k > 0; k--) {
       seed = (seed * 1664525 + 1013904223) >>> 0;
       var m = seed % (k + 1);
-      var tmp = arr[k]; arr[k] = arr[m]; arr[m] = tmp;
+      var t = arr[k]; arr[k] = arr[m]; arr[m] = t;
     }
     return arr;
-  }
-
-  function current() {
-    if (!images.length) return null;
-    var found = null;
-    images.forEach(function (im) { if (im.id === settings.currentId) found = im; });
-    if (found) return found;
-    for (var i = 0; i < images.length; i++) {
-      if ((images[i].revealed || 0) < settings.tiles) return images[i];
-    }
-    return images[images.length - 1];
   }
 
   function urlFor(im) {
@@ -498,101 +508,195 @@
     return urls[im.id];
   }
 
-  /* ---------- rendering ---------- */
+  function gridOf(total) {
+    if (total === 60) return 6;
+    if (total === 150) return 10;
+    return 15;
+  }
+
+  // 1枚を開ききった直後は、次の1枚へ進まずに完成した絵を出したままにする
+  function progress() {
+    var total = settings.tiles;
+    var all = totalReps();
+    var idx = Math.floor(all / total);
+    var revealed = all - idx * total;
+    if (revealed === 0 && idx > 0) { idx -= 1; revealed = total; }
+    return { total: total, all: all, idx: idx, revealed: revealed };
+  }
+
+  /* ---------- render: reveal ---------- */
 
   function renderReveal() {
     var stage = document.getElementById("stage");
-    var im = current();
-    var total = settings.tiles;
+    var p = progress();
+    var total = p.total, all = p.all, idx = p.idx, revealed = p.revealed;
 
-    if (!im) {
+    if (!images.length) {
       stage.innerHTML = '<div class="empty">画像がまだありません。<br>右上の設定から追加してください。</div>';
-      document.getElementById("revealCount").innerHTML = '0<small>/ ' + total + '</small>';
-      document.getElementById("revealLabel").textContent = "達成すると1マス開きます";
+      document.getElementById("progN").innerHTML = all + '<small>/ ' + total + "</small>";
+      document.getElementById("progSub").textContent = "レップごとに1マス開きます";
+      lastRevealed = -1;
       return;
     }
 
-    var revealed = Math.min(im.revealed || 0, total);
-    var cols = total === 12 ? 3 : total === 24 ? 4 : 6;
+    var finished = idx >= images.length;
+    var im = images[Math.min(idx, images.length - 1)];
+    if (finished) revealed = total;
+
+    var cols = gridOf(total);
     var rows = total / cols;
     var ord = order(im.id, total);
     var open = {};
     for (var i = 0; i < revealed; i++) open[ord[i]] = true;
 
-    var html = '<img src="' + urlFor(im) + '" alt="">';
-    html += '<div class="tiles" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr)">';
-    for (var t = 0; t < total; t++) {
-      html += '<div class="tile' + (open[t] ? " open" : "") + '"></div>';
+    if (stage.dataset.im !== im.id || stage.dataset.total !== String(total)) {
+      var media = im.type === "video"
+        ? '<video muted loop playsinline autoplay preload="auto"><source src="' + urlFor(im) + '" type="' + (im.mime || "video/mp4") + '"></video>'
+        : '<img src="' + urlFor(im) + '" alt="">';
+      var t = '<div class="tiles" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr)">';
+      for (var c = 0; c < total; c++) t += '<div class="tile"></div>';
+      t += "</div>";
+      stage.innerHTML = media + t;
+      stage.dataset.im = im.id;
+      stage.dataset.total = String(total);
+      lastRevealed = -1;
+      var v = stage.querySelector("video");
+      if (v) { v.play().catch(function () {}); }
     }
-    html += "</div>";
 
+    var posOf = new Array(total);
+    for (var q = 0; q < total; q++) posOf[ord[q]] = q;
+
+    var tiles = stage.querySelector(".tiles");
+    var stagger = lastRevealed >= 0 && revealed > lastRevealed;
+    for (var j = 0; j < total; j++) {
+      var el = tiles.children[j];
+      var pos = posOf[j];
+      if (stagger && !el.classList.contains("open") && open[j]) {
+        el.style.transitionDelay = Math.min((pos - lastRevealed) * 70, 1400) + "ms";
+      } else {
+        el.style.transitionDelay = "0ms";
+      }
+      el.classList.toggle("open", !!open[j]);
+    }
+    lastRevealed = revealed;
+
+    var banner = stage.querySelector(".done-banner");
     if (revealed >= total) {
-      html += '<div class="done-banner"><span>完成しました</span>' +
-        (images.length > 1 ? '<button class="btn primary" style="width:auto;padding:8px 14px" id="nextImage">次の画像へ</button>' : "") +
-        "</div>";
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.className = "done-banner";
+        stage.appendChild(banner);
+      }
+      banner.textContent = idx >= images.length - 1
+        ? "全部開ききりました。設定から追加できます"
+        : "完成しました。次のレップから次の1枚へ";
+    } else if (banner) {
+      banner.remove();
     }
 
-    stage.innerHTML = html;
-
-    var next = document.getElementById("nextImage");
-    if (next) next.addEventListener("click", goNextImage);
-
-    document.getElementById("revealCount").innerHTML =
-      revealed + '<small>/ ' + total + '</small>';
-    document.getElementById("revealLabel").textContent =
-      revealed >= total ? "この画像は開ききりました" : "あと " + (total - revealed) + " 回で完成";
+    document.getElementById("progN").innerHTML = revealed + '<small>/ ' + total + "</small>";
+    document.getElementById("progSub").textContent =
+      revealed >= total ? Math.max(0, images.length - idx - 1) + " 枚が未開封"
+        : "あと " + (total - revealed) + " レップで完成";
   }
 
-  function goNextImage() {
-    var unfinished = images.filter(function (im) {
-      return (im.revealed || 0) < settings.tiles;
-    });
-    if (!unfinished.length) return;
-    settings.currentId = unfinished[0].id;
-    saveSettings();
-    renderReveal();
-    renderImageList();
+  /* ---------- render: session ---------- */
+
+  function activeDate() {
+    if (settings.debug && selDate) return fromKey(selDate);
+    return today();
   }
 
-  function renderDowRow() {
-    var row = document.getElementById("dowRow");
-    row.innerHTML = DOW.map(function (d, i) {
-      var cls = i === 0 ? " sun" : i === 6 ? " sat" : "";
-      return '<div class="dow' + cls + '">' + d + "</div>";
+  function activeSession(date) {
+    if (settings.debug) return selSession ? sessionById(selSession) : (sessionFor(date) || SESSIONS[0]);
+    return sessionFor(date);
+  }
+
+  function renderSession() {
+    var date = activeDate();
+    var k = key(date);
+    var sess = activeSession(date);
+    var tabs = document.getElementById("sessTabs");
+    var moves = document.getElementById("moves");
+
+    document.getElementById("sessDate").textContent =
+      (date.getMonth() + 1) + "月" + date.getDate() + "日（" + DOW[date.getDay()] + "）";
+
+    if (settings.debug) {
+      tabs.hidden = false;
+      tabs.innerHTML = SESSIONS.map(function (s) {
+        return '<button data-sess="' + s.id + '" class="' + (s.id === sess.id ? "on" : "") + '">' + s.label + "</button>";
+      }).join("");
+    } else {
+      tabs.hidden = true;
+    }
+
+    if (!sess) {
+      document.getElementById("sessTitle").textContent = "休養日";
+      moves.innerHTML = '<p class="rest">今日は予定日ではありません。<b>筋肉は休んでいる間に育ちます。</b><br>' +
+        "予定日以外に行った分を記録したい場合は、設定のデバッグモードから入力できます。</p>";
+      return;
+    }
+
+    document.getElementById("sessTitle").textContent = sess.label;
+
+    moves.innerHTML = sess.moves.map(function (m) {
+      var n = repsOn(k, m.id);
+      var capped = !settings.debug && n >= m.target;
+      return '<div class="move" data-move="' + m.id + '">' +
+        '<div class="move-top"><div>' +
+        '<div class="move-name">' + m.name + "</div>" +
+        '<div class="move-note">' + m.note + "</div></div>" +
+        '<div class="move-n' + (n >= m.target ? " full" : "") + '">' + n +
+        "<small> / " + m.target + "</small></div></div>" +
+        '<div class="ctl">' +
+        '<button class="minus" data-d="-1"' + (n <= 0 ? " disabled" : "") + ">−1</button>" +
+        '<button class="plus" data-d="1"' + (capped ? " disabled" : "") + ">+1</button>" +
+        '<button class="set" data-d="set"' + (capped ? " disabled" : "") + ">+" + m.target + "</button>" +
+        "</div></div>";
+    }).join("");
+  }
+
+  /* ---------- render: calendar ---------- */
+
+  function renderDow() {
+    document.getElementById("dowRow").innerHTML = DOW.map(function (d, i) {
+      return '<div class="dow' + (i === 0 ? " sun" : i === 6 ? " sat" : "") + '">' + d + "</div>";
     }).join("");
   }
 
   function renderCalendar() {
     var first = new Date(viewYear, viewMonth, 1);
     var last = new Date(viewYear, viewMonth + 1, 0);
-    var tdy = today();
-    var tdyKey = key(tdy);
+    var tdyKey = key(today());
 
     document.getElementById("calTitle").textContent = viewYear + "年 " + (viewMonth + 1) + "月";
 
     var cells = [];
-    for (var p = 0; p < first.getDay(); p++) {
-      cells.push('<button class="day pad" disabled></button>');
-    }
+    for (var p = 0; p < first.getDay(); p++) cells.push('<button class="day pad" disabled></button>');
+
     for (var d = 1; d <= last.getDate(); d++) {
       var date = new Date(viewYear, viewMonth, d);
       var k = key(date);
-      var planned = settings.days.indexOf(date.getDay()) >= 0;
-      var done = !!checks[k];
-      var future = date > tdy;
+      var planned = !!sessionFor(date);
+      var got = dayTotal(k);
+      var tgt = dayTarget(date) || 1;
       var cls = "day in";
       if (planned) cls += " planned";
-      if (done) cls += " done";
+      if (got > 0 && got < tgt) cls += " part";
+      if (got >= tgt && got > 0) cls += " full";
       if (k === tdyKey) cls += " today";
+      if (settings.debug && k === selDate) cls += " sel";
       cells.push(
-        '<button class="' + cls + '" data-k="' + k + '"' + (future ? " disabled" : "") + '>' +
-        d +
-        (planned || done ? '<i class="dot"></i>' : "") +
-        "</button>"
+        '<button class="' + cls + '" data-k="' + k + '"' + (settings.debug ? "" : " disabled") + ">" +
+        d + (planned || got > 0 ? '<i class="dot"></i>' : "") + "</button>"
       );
     }
     document.getElementById("calGrid").innerHTML = cells.join("");
   }
+
+  /* ---------- render: settings ---------- */
 
   function renderImageList() {
     var list = document.getElementById("imgList");
@@ -600,16 +704,15 @@
       list.innerHTML = '<p class="note" style="margin:0">まだ登録されていません。</p>';
       return;
     }
-    var cur = current();
-    list.innerHTML = images.map(function (im) {
-      var r = Math.min(im.revealed || 0, settings.tiles);
-      return '<div class="imgrow' + (cur && cur.id === im.id ? " active" : "") + '">' +
-        '<img class="thumb" src="' + urlFor(im) + '" alt="">' +
-        '<div class="meta"><b>' + escapeHtml(im.name) + "</b>" +
-        "<span>" + r + " / " + settings.tiles + " マス</span></div>" +
-        '<button class="act" data-use="' + im.id + '">使う</button>' +
-        '<button class="act del" data-del="' + im.id + '">削除</button>' +
-        "</div>";
+    var idx = progress().idx;
+    list.innerHTML = images.map(function (im, i) {
+      var st = i < idx ? "開封済み" : i === idx ? "表示中" : "未開封";
+      return '<div class="imgrow' + (i === idx ? " active" : "") + '">' +
+        (im.type === "video"
+          ? '<div class="thumb" style="filter:none;display:grid;place-items:center;font-size:0.62rem;color:var(--muted)">動画</div>'
+          : '<img class="thumb" src="' + urlFor(im) + '" alt="">') +
+        '<div class="meta"><b>' + escapeHtml(im.name) + "</b><span>" + st + "</span></div>" +
+        '<button class="act del" data-del="' + im.id + '">削除</button></div>';
     }).join("");
   }
 
@@ -620,75 +723,76 @@
   }
 
   function renderSettings() {
-    var picker = document.getElementById("dowPicker");
-    picker.innerHTML = DOW.map(function (d, i) {
-      return '<button data-dow="' + i + '" class="' +
-        (settings.days.indexOf(i) >= 0 ? "on" : "") + '">' + d + "</button>";
+    document.getElementById("debugSwitch").classList.toggle("on", settings.debug);
+
+    document.getElementById("dowPicker").innerHTML = DOW.map(function (d, i) {
+      return '<button data-dow="' + i + '" class="' + (settings.days.indexOf(i) >= 0 ? "on" : "") + '">' + d + "</button>";
     }).join("");
 
-    var seg = document.getElementById("tileSeg");
-    seg.innerHTML = TILE_CHOICES.map(function (n) {
-      return '<button data-tiles="' + n + '" class="' +
-        (settings.tiles === n ? "on" : "") + '">' + n + "</button>";
+    document.getElementById("tileSeg").innerHTML = TILE_CHOICES.map(function (n) {
+      return '<button data-tiles="' + n + '" class="' + (settings.tiles === n ? "on" : "") + '">' + n + "</button>";
     }).join("");
+
+    var perWeek = plannedDays().reduce(function (a, dw) {
+      var s = sessionFor(new Date(2026, 0, 4 + dw));
+      return a + (s ? s.moves.reduce(function (x, m) { return x + m.target; }, 0) : 0);
+    }, 0);
+    document.getElementById("tileNote").textContent = perWeek
+      ? "今の設定だと週 " + perWeek + " レップ。1枚あたり約 " +
+        Math.max(1, Math.round(settings.tiles / perWeek)) + " 週間で完成します。"
+      : "";
 
     renderImageList();
+  }
+
+  function renderAll() {
+    document.getElementById("debugFlag").hidden = !settings.debug;
+    renderReveal();
+    renderSession();
+    renderCalendar();
   }
 
   /* ---------- actions ---------- */
 
-  function toggleDay(k) {
-    var im = current();
-    if (checks[k]) {
-      delete checks[k];
-      if (im && im.revealed > 0) {
-        im.revealed -= 1;
-        putImage(im);
-      }
-    } else {
-      checks[k] = true;
-      if (im && (im.revealed || 0) < settings.tiles) {
-        im.revealed = (im.revealed || 0) + 1;
-        putImage(im);
-      }
-    }
-    saveChecks();
-    renderCalendar();
-    renderReveal();
-    renderImageList();
-  }
+  document.getElementById("moves").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-d]");
+    if (!b || b.disabled) return;
+    var wrap = b.closest("[data-move]");
+    if (!wrap) return;
 
-  function addFiles(files) {
-    var jobs = [];
-    for (var i = 0; i < files.length; i++) {
-      (function (f) {
-        var rec = {
-          id: String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8),
-          name: f.name || "画像",
-          blob: f,
-          revealed: 0,
-          added: Date.now()
-        };
-        jobs.push(putImage(rec).then(function () { return rec; }));
-      })(files[i]);
-    }
-    Promise.all(jobs).then(function (recs) {
-      images = images.concat(recs);
-      if (!settings.currentId && recs.length) {
-        settings.currentId = recs[0].id;
-        saveSettings();
-      }
-      renderImageList();
-      renderReveal();
-    });
-  }
+    var date = activeDate();
+    var k = key(date);
+    var sess = activeSession(date);
+    if (!sess) return;
+    var moveId = wrap.dataset.move;
+    var move = null;
+    sess.moves.forEach(function (m) { if (m.id === moveId) move = m; });
+    if (!move) return;
 
-  /* ---------- wiring ---------- */
+    var d = b.dataset.d === "set" ? move.target : Number(b.dataset.d);
+    if (d > 0 && !settings.debug) {
+      var room = move.target - repsOn(k, moveId);
+      if (room <= 0) return;
+      d = Math.min(d, room);
+    }
+    addRep(k, moveId, d);
+    renderAll();
+  });
+
+  document.getElementById("sessTabs").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-sess]");
+    if (!b) return;
+    selSession = b.dataset.sess;
+    renderSession();
+  });
 
   document.getElementById("calGrid").addEventListener("click", function (e) {
-    var btn = e.target.closest(".day");
-    if (!btn || btn.disabled || !btn.dataset.k) return;
-    toggleDay(btn.dataset.k);
+    var b = e.target.closest(".day");
+    if (!b || b.disabled || !b.dataset.k) return;
+    selDate = b.dataset.k;
+    var s = sessionFor(fromKey(selDate));
+    selSession = s ? s.id : selSession;
+    renderAll();
   });
 
   document.getElementById("prevMonth").addEventListener("click", function () {
@@ -696,33 +800,35 @@
     if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
     renderCalendar();
   });
-
   document.getElementById("nextMonth").addEventListener("click", function () {
     viewMonth += 1;
     if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
     renderCalendar();
   });
-
   document.getElementById("thisMonth").addEventListener("click", function () {
     var t = today();
-    viewYear = t.getFullYear();
-    viewMonth = t.getMonth();
+    viewYear = t.getFullYear(); viewMonth = t.getMonth();
     renderCalendar();
   });
 
   var sheetBg = document.getElementById("sheetBg");
-
   document.getElementById("openSettings").addEventListener("click", function () {
     renderSettings();
     sheetBg.classList.add("open");
   });
-
   document.getElementById("closeSheet").addEventListener("click", function () {
     sheetBg.classList.remove("open");
   });
-
   sheetBg.addEventListener("click", function (e) {
     if (e.target === sheetBg) sheetBg.classList.remove("open");
+  });
+
+  document.getElementById("debugSwitch").addEventListener("click", function () {
+    settings.debug = !settings.debug;
+    if (!settings.debug) { selDate = null; selSession = null; }
+    saveSettings();
+    renderSettings();
+    renderAll();
   });
 
   document.getElementById("dowPicker").addEventListener("click", function (e) {
@@ -730,10 +836,11 @@
     if (!b) return;
     var n = Number(b.dataset.dow);
     var i = settings.days.indexOf(n);
-    if (i >= 0) settings.days.splice(i, 1); else settings.days.push(n);
+    if (i >= 0) { if (settings.days.length > 1) settings.days.splice(i, 1); }
+    else settings.days.push(n);
     saveSettings();
     renderSettings();
-    renderCalendar();
+    renderAll();
   });
 
   document.getElementById("tileSeg").addEventListener("click", function (e) {
@@ -742,7 +849,7 @@
     settings.tiles = Number(b.dataset.tiles);
     saveSettings();
     renderSettings();
-    renderReveal();
+    renderAll();
   });
 
   document.getElementById("addImage").addEventListener("click", function () {
@@ -750,34 +857,43 @@
   });
 
   document.getElementById("fileInput").addEventListener("change", function (e) {
-    if (e.target.files && e.target.files.length) addFiles(e.target.files);
+    var files = e.target.files;
+    if (!files || !files.length) return;
+    var jobs = [];
+    for (var i = 0; i < files.length; i++) {
+      (function (f) {
+        var rec = {
+          id: String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8),
+          name: f.name || "ファイル",
+          blob: f,
+          mime: f.type || "",
+          type: (f.type || "").indexOf("video") === 0 ? "video" : "image",
+          added: Date.now()
+        };
+        jobs.push(tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; }));
+      })(files[i]);
+    }
+    Promise.all(jobs).then(function (recs) {
+      images = images.concat(recs);
+      renderImageList();
+      renderAll();
+    });
     e.target.value = "";
   });
 
   document.getElementById("imgList").addEventListener("click", function (e) {
-    var use = e.target.closest("[data-use]");
-    if (use) {
-      settings.currentId = use.dataset.use;
-      saveSettings();
-      renderImageList();
-      renderReveal();
-      return;
-    }
     var del = e.target.closest("[data-del]");
-    if (del) {
-      var id = del.dataset.del;
-      if (!confirm("この画像を削除しますか。")) return;
-      delImage(id).then(function () {
-        images = images.filter(function (im) { return im.id !== id; });
-        if (urls[id]) { URL.revokeObjectURL(urls[id]); delete urls[id]; }
-        if (settings.currentId === id) {
-          settings.currentId = images.length ? images[0].id : null;
-          saveSettings();
-        }
-        renderImageList();
-        renderReveal();
-      });
-    }
+    if (!del) return;
+    var id = del.dataset.del;
+    if (!confirm("削除しますか。")) return;
+    tx("readwrite", function (s) { return s.delete(id); }).then(function () {
+      images = images.filter(function (im) { return im.id !== id; });
+      if (urls[id]) { URL.revokeObjectURL(urls[id]); delete urls[id]; }
+      var stage = document.getElementById("stage");
+      delete stage.dataset.im;
+      renderImageList();
+      renderAll();
+    });
   });
 
   /* ---------- boot ---------- */
@@ -785,19 +901,20 @@
   var t0 = today();
   viewYear = t0.getFullYear();
   viewMonth = t0.getMonth();
+  selDate = key(t0);
 
-  renderDowRow();
-  renderCalendar();
+  renderDow();
+  renderAll();
 
   openDB().then(function (d) {
     db = d;
-    return allImages();
+    return tx("readonly", function (s) { return s.getAll(); });
   }).then(function (recs) {
     images = (recs || []).sort(function (a, b) { return a.added - b.added; });
     renderReveal();
   }).catch(function () {
     document.getElementById("stage").innerHTML =
-      '<div class="empty">この環境では画像を保存できません。<br>プライベートブラウズを解除して開いてください。</div>';
+      '<div class="empty">この環境では保存できません。<br>プライベートブラウズを解除して開いてください。</div>';
   });
 })();
 </script>
