@@ -9,6 +9,7 @@
     --bg: #14161a;
     --panel: #1d2026;
     --panel-2: #262a32;
+    --line: #333944;
     --text: #e8eaee;
     --muted: #949cab;
     --accent: #4ec9a5;
@@ -21,28 +22,18 @@
   body {
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
-    font-size: 16px;
-    line-height: 1.6;
-    padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px));
-    max-width: 560px;
-    margin: 0 auto;
+    font-size: 16px; line-height: 1.6;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(32px + env(safe-area-inset-bottom, 0px));
+    max-width: 560px; margin: 0 auto;
     -webkit-text-size-adjust: 100%;
-    -webkit-user-select: none;
-    user-select: none;
+    -webkit-user-select: none; user-select: none;
   }
 
   h1 { font-size: 1.05rem; margin: 0; font-weight: 700; }
   button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 
   .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-  .badge {
-    font-size: 0.66rem;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    padding: 2px 10px;
-  }
+  .badge { font-size: 0.66rem; letter-spacing: 0.1em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 10px; }
 
   .card { background: var(--panel); border-radius: 16px; padding: 14px; margin-bottom: 14px; }
 
@@ -54,33 +45,32 @@
   .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
   .stage svg.art { display: block; width: 100%; height: auto; }
   .tiles { position: absolute; inset: 0; display: grid; pointer-events: none; }
-  .tile { background: var(--panel-2); transition: opacity 500ms ease; }
+  .tile { background: var(--panel-2); transition: opacity 520ms ease; }
   .tile.open { opacity: 0; }
-  .done-banner {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 10px 14px;
-    background: rgba(20,22,26,0.88);
-    font-size: 0.85rem; text-align: center;
-  }
+  .done-banner { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px; background: rgba(20,22,26,0.88); font-size: 0.85rem; text-align: center; }
 
+  .sess-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .sess-title { font-weight: 700; font-size: 0.98rem; }
+  .sess-date { font-size: 0.76rem; color: var(--muted); }
+
+  .move { padding: 13px 0; border-top: 1px solid var(--line); }
+  .move:first-of-type { border-top: none; padding-top: 0; }
   .move-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
   .move-name { font-weight: 500; font-size: 0.93rem; }
   .move-note { font-size: 0.72rem; color: var(--muted); }
-  .move-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.05rem; flex: none; }
-  .move-n small { font-weight: 400; font-size: 0.74rem; color: var(--muted); }
+  .move-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; flex: none; }
+  .move-n small { font-weight: 400; font-size: 0.74rem; color: var(--muted); margin-left: 1px; }
 
-  .ctl { display: flex; gap: 6px; }
-  .ctl button { border-radius: 10px; background: var(--panel-2); padding: 12px 0; font-size: 0.88rem; font-weight: 500; }
-  .ctl .minus { width: 52px; color: var(--muted); }
-  .ctl .plus { flex: 1; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-  .ctl .set { width: 92px; }
-  .ctl button:disabled { opacity: 0.32; }
-  .ctl button:active:not(:disabled) { filter: brightness(1.18); }
+  .ctl button { display: block; width: 100%; border-radius: 10px; background: var(--accent); color: var(--accent-ink); padding: 13px 0; font-size: 0.88rem; font-weight: 700; }
+  .ctl button.undo { background: var(--panel-2); color: var(--muted); font-weight: 500; }
+  .ctl button:active { filter: brightness(1.18); }
+
+  .row { display: flex; gap: 8px; margin-top: 14px; }
+  .row button { flex: 1; padding: 11px; border-radius: 10px; background: var(--panel-2); font-size: 0.82rem; color: var(--muted); }
+  .row button:disabled { opacity: 0.35; }
 
   .hint { font-size: 0.78rem; color: var(--muted); line-height: 1.75; margin: 0; }
   .hint b { color: var(--text); font-weight: 500; }
-
-  .reset { display: block; width: 100%; padding: 11px; border-radius: 10px; background: var(--panel-2); text-align: center; font-size: 0.82rem; color: var(--muted); margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -92,7 +82,7 @@
 
 <section class="card">
   <div class="prog">
-    <div class="prog-n" id="progN">0<small>/ 60</small></div>
+    <div class="prog-n" id="progN">0<small>/ 6 セット</small></div>
     <div class="prog-sub" id="progSub">—</div>
   </div>
   <div class="stage" id="stage">
@@ -143,38 +133,44 @@
 </section>
 
 <section class="card">
-  <div class="move-top">
-    <div>
-      <div class="move-name">スクワット</div>
-      <div class="move-note">椅子に座って立つ動作から</div>
-    </div>
-    <div class="move-n" id="moveN">0<small> / 10</small></div>
+  <div class="sess-head">
+    <div class="sess-title">脚の日（3セット）</div>
+    <div class="sess-date" id="dayLabel">1日目</div>
   </div>
-  <div class="ctl">
-    <button class="minus" id="minus">−1</button>
-    <button class="plus" id="plus">+1</button>
-    <button class="set" id="set">+10</button>
+  <div id="moves"></div>
+  <div class="row">
+    <button id="nextDay">次のトレーニング日へ</button>
+    <button id="reset">最初に戻す</button>
   </div>
-  <button class="reset" id="reset">最初に戻す</button>
 </section>
 
 <p class="hint">
-  <b>+1 を押すごとに、目隠しが1マス開きます。</b>
-  <b>+10</b> はセットが終わったあとにまとめて入れる用で、10マスが順に開きます。
-  本番では複数の種目が並び、その日のメニューの回数までしか押せません。
+  <b>1セット完了で6マス開きます。</b>
+  1回のトレーニングは3セットなので18マス、2回で1枚が完成します。
+  本番では、その日のメニューのセットしか完了にできません。
 </p>
 
 <script>
 (function () {
   "use strict";
 
-  var TOTAL = 60;
+  var TILES_PER_SET = 6;
+  var SETS = 6;
+  var TOTAL = SETS * TILES_PER_SET;
   var COLS = 6;
-  var TARGET = 10;
-  var reps = 0;
+
+  var MOVES = [
+    { id: "squat", name: "スクワット", reps: 10, note: "椅子に座って立つ動作から" },
+    { id: "calf", name: "カーフレイズ", reps: 15, note: "かかとの上げ下げ" },
+    { id: "abs", name: "ニートゥチェスト", reps: 10, note: "腹。どの回でも最後に" }
+  ];
+
+  var banked = 0;
+  var day = 1;
+  var done = {};
 
   function order(total) {
-    var seed = 20260921;
+    var seed = 20260922;
     var arr = [];
     for (var j = 0; j < total; j++) arr.push(j);
     for (var k = total - 1; k > 0; k--) {
@@ -192,21 +188,27 @@
   var tiles = document.getElementById("tiles");
   tiles.style.gridTemplateColumns = "repeat(" + COLS + ",1fr)";
   tiles.style.gridTemplateRows = "repeat(" + (TOTAL / COLS) + ",1fr)";
-  var html = "";
-  for (var i = 0; i < TOTAL; i++) html += '<div class="tile"></div>';
-  tiles.innerHTML = html;
+  var h = "";
+  for (var i = 0; i < TOTAL; i++) h += '<div class="tile"></div>';
+  tiles.innerHTML = h;
 
   var last = 0;
 
-  function render() {
-    var n = Math.min(reps, TOTAL);
+  function sets() {
+    var n = banked;
+    MOVES.forEach(function (m) { if (done[m.id]) n += 1; });
+    return Math.min(n, SETS);
+  }
+
+  function renderTiles() {
+    var n = sets() * TILES_PER_SET;
     var open = {};
     for (var i = 0; i < n; i++) open[ORD[i]] = true;
 
     for (var j = 0; j < TOTAL; j++) {
       var el = tiles.children[j];
       if (n > last && !el.classList.contains("open") && open[j]) {
-        el.style.transitionDelay = Math.min((POS[j] - last) * 70, 1400) + "ms";
+        el.style.transitionDelay = Math.min((POS[j] - last) * 90, 1600) + "ms";
       } else {
         el.style.transitionDelay = "0ms";
       }
@@ -226,28 +228,46 @@
       banner.remove();
     }
 
-    document.getElementById("progN").innerHTML = n + '<small>/ ' + TOTAL + "</small>";
+    document.getElementById("progN").innerHTML = sets() + '<small>/ ' + SETS + " セット</small>";
     document.getElementById("progSub").textContent =
-      n >= TOTAL ? "開ききりました" : "あと " + (TOTAL - n) + " レップで完成";
-
-    var shown = Math.min(reps, TARGET);
-    document.getElementById("moveN").innerHTML = shown + "<small> / " + TARGET + "</small>";
-    document.getElementById("minus").disabled = reps <= 0;
-    document.getElementById("plus").disabled = reps >= TOTAL;
-    document.getElementById("set").disabled = reps >= TOTAL;
+      sets() >= SETS ? "開ききりました" : "あと " + (SETS - sets()) + " セットで完成";
   }
 
-  document.getElementById("plus").addEventListener("click", function () {
-    reps = Math.min(reps + 1, TOTAL); render();
+  function renderMoves() {
+    document.getElementById("dayLabel").textContent = day + "日目";
+    document.getElementById("moves").innerHTML = MOVES.map(function (m) {
+      var d = !!done[m.id];
+      return '<div class="move" data-move="' + m.id + '">' +
+        '<div class="move-top"><div>' +
+        '<div class="move-name">' + m.name + "</div>" +
+        '<div class="move-note">' + m.note + "</div></div>" +
+        '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
+        '<div class="ctl"><button class="' + (d ? "undo" : "") + '">' +
+        (d ? "完了 ✓　取り消す" : "セット完了") + "</button></div></div>";
+    }).join("");
+    document.getElementById("nextDay").disabled = sets() >= SETS;
+  }
+
+  function render() { renderTiles(); renderMoves(); }
+
+  document.getElementById("moves").addEventListener("click", function (e) {
+    var wrap = e.target.closest("[data-move]");
+    if (!wrap || !e.target.closest("button")) return;
+    var id = wrap.dataset.move;
+    if (done[id]) delete done[id]; else done[id] = true;
+    render();
   });
-  document.getElementById("set").addEventListener("click", function () {
-    reps = Math.min(reps + TARGET, TOTAL); render();
+
+  document.getElementById("nextDay").addEventListener("click", function () {
+    banked = sets();
+    done = {};
+    day += 1;
+    render();
   });
-  document.getElementById("minus").addEventListener("click", function () {
-    reps = Math.max(reps - 1, 0); render();
-  });
+
   document.getElementById("reset").addEventListener("click", function () {
-    reps = 0; last = 0; render();
+    banked = 0; done = {}; day = 1; last = 0;
+    render();
   });
 
   render();

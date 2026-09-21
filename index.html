@@ -41,30 +41,19 @@
   h1 { font-size: 1.05rem; margin: 0; font-weight: 700; }
   button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 
-  .topbar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
+  .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .topbar .spacer { flex: 1; }
 
   .debug-flag {
-    font-size: 0.66rem;
-    letter-spacing: 0.08em;
-    color: var(--warn);
-    border: 1px solid var(--warn);
-    border-radius: 999px;
-    padding: 1px 9px;
+    font-size: 0.66rem; letter-spacing: 0.08em;
+    color: var(--warn); border: 1px solid var(--warn);
+    border-radius: 999px; padding: 1px 9px;
   }
 
   .icon-btn {
-    width: 36px; height: 36px;
-    border-radius: 10px;
-    background: var(--panel);
-    display: grid; place-items: center;
-    font-size: 1.05rem; line-height: 1;
-    flex: none;
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--panel); display: grid; place-items: center;
+    font-size: 1.05rem; line-height: 1; flex: none;
   }
   .icon-btn:active { background: var(--panel-2); }
 
@@ -72,13 +61,7 @@
 
   /* ---- reveal ---- */
 
-  .prog {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 11px;
-  }
+  .prog { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
   .prog-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.3rem; }
   .prog-n small { font-weight: 400; font-size: 0.78rem; color: var(--muted); margin-left: 3px; }
   .prog-sub { font-size: 0.76rem; color: var(--muted); text-align: right; }
@@ -87,73 +70,42 @@
   .stage img, .stage video { display: block; width: 100%; height: auto; }
 
   .tiles { position: absolute; inset: 0; display: grid; pointer-events: none; }
-  .tile { background: var(--panel-2); transition: opacity 500ms ease; }
+  .tile { background: var(--panel-2); transition: opacity 520ms ease; }
   .tile.open { opacity: 0; }
 
   .done-banner {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    padding: 10px 14px;
-    background: rgba(20,22,26,0.88);
-    font-size: 0.85rem;
-    text-align: center;
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 10px 14px; background: rgba(20,22,26,0.88);
+    font-size: 0.85rem; text-align: center;
   }
 
   .empty { padding: 42px 18px; text-align: center; color: var(--muted); font-size: 0.87rem; }
 
   /* ---- session ---- */
 
-  .sess-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
+  .sess-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
   .sess-title { font-weight: 700; font-size: 0.98rem; }
   .sess-date { font-size: 0.76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
   .tabs { display: flex; gap: 5px; margin-bottom: 12px; }
-  .tabs button {
-    flex: 1;
-    padding: 7px 0;
-    border-radius: 8px;
-    background: var(--panel-2);
-    font-size: 0.78rem;
-  }
+  .tabs button { flex: 1; padding: 7px 0; border-radius: 8px; background: var(--panel-2); font-size: 0.78rem; }
   .tabs button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
-  .move { padding: 12px 0; border-top: 1px solid var(--line); }
+  .move { padding: 13px 0; border-top: 1px solid var(--line); }
   .move:first-of-type { border-top: none; padding-top: 0; }
-  .move-top {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 9px;
-  }
+  .move-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
   .move-name { font-weight: 500; font-size: 0.93rem; }
   .move-note { font-size: 0.72rem; color: var(--muted); }
-  .move-n {
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    font-size: 1.05rem;
-    flex: none;
-  }
-  .move-n.full { color: var(--accent); }
-  .move-n small { font-weight: 400; font-size: 0.74rem; color: var(--muted); }
+  .move-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; flex: none; }
+  .move-n small { font-weight: 400; font-size: 0.74rem; color: var(--muted); margin-left: 1px; }
+  .move-sets { font-size: 0.72rem; color: var(--warn); font-variant-numeric: tabular-nums; }
 
   .ctl { display: flex; gap: 6px; }
-  .ctl button {
-    border-radius: 10px;
-    background: var(--panel-2);
-    padding: 12px 0;
-    font-size: 0.88rem;
-    font-weight: 500;
-  }
-  .ctl .minus { width: 52px; color: var(--muted); }
-  .ctl .plus { flex: 1; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-  .ctl .set { width: 92px; }
+  .ctl button { border-radius: 10px; background: var(--panel-2); padding: 13px 0; font-size: 0.88rem; font-weight: 500; }
+  .ctl .wide { flex: 1; }
+  .ctl .plus { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .ctl .undo { color: var(--muted); }
+  .ctl .step { width: 60px; }
   .ctl button:disabled { opacity: 0.32; }
   .ctl button:active:not(:disabled) { filter: brightness(1.18); }
 
@@ -173,25 +125,18 @@
   .dow.sat { color: #7da8e0; }
 
   .day {
-    aspect-ratio: 1;
-    border-radius: 9px;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 2px;
-    font-size: 0.82rem;
-    font-variant-numeric: tabular-nums;
-    color: var(--muted);
-    position: relative;
+    aspect-ratio: 1; border-radius: 9px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: 0.82rem; font-variant-numeric: tabular-nums; color: var(--muted); position: relative;
   }
   .day.pad { visibility: hidden; }
   .day.in { color: var(--text); }
   .day.planned { background: var(--panel-2); }
   .day.part { background: #2f5a4c; }
   .day.full { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-  .day.sel { box-shadow: inset 0 0 0 2px var(--warn); }
   .day.today { box-shadow: inset 0 0 0 1.5px var(--muted); }
   .day.full.today { box-shadow: inset 0 0 0 1.5px var(--text); }
-  .day.sel.today { box-shadow: inset 0 0 0 2px var(--warn); }
+  .day.sel { box-shadow: inset 0 0 0 2px var(--warn); }
   .day .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
   .day.full .dot, .day.part .dot { background: rgba(255,255,255,0.7); }
 
@@ -204,8 +149,7 @@
   .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: flex-end; z-index: 20; }
   .sheet-bg.open { display: flex; }
   .sheet {
-    background: var(--panel);
-    width: 100%; max-width: 560px; margin: 0 auto;
+    background: var(--panel); width: 100%; max-width: 560px; margin: 0 auto;
     border-radius: 18px 18px 0 0;
     padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
     max-height: 88vh; overflow-y: auto;
@@ -222,13 +166,7 @@
   .seg button { flex: 1; padding: 9px 0; border-radius: 8px; background: var(--panel-2); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
   .seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
-  .toggle {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px;
-    background: var(--panel-2);
-    border-radius: 11px;
-    padding: 12px 14px;
-  }
+  .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--panel-2); border-radius: 11px; padding: 12px 14px; }
   .toggle .lab { font-size: 0.86rem; }
   .toggle .lab small { display: block; color: var(--muted); font-size: 0.72rem; line-height: 1.6; }
   .switch { width: 50px; height: 30px; border-radius: 999px; background: var(--line); position: relative; flex: none; transition: background 160ms; }
@@ -246,7 +184,7 @@
   .imgrow .thumb { width: 40px; height: 40px; border-radius: 6px; background: var(--line); object-fit: cover; flex: none; filter: blur(7px); }
   .imgrow .meta { flex: 1; min-width: 0; font-size: 0.78rem; }
   .imgrow .meta b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .imgrow .meta span { color: var(--muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+  .imgrow .meta span { color: var(--muted); font-size: 0.72rem; }
   .imgrow.active { box-shadow: inset 0 0 0 1.5px var(--accent); }
   .imgrow .act { font-size: 0.72rem; color: var(--muted); padding: 6px 4px; }
   .imgrow .act.del { color: var(--danger); }
@@ -267,8 +205,8 @@
 
 <section class="card">
   <div class="prog">
-    <div class="prog-n" id="progN">0<small>/ 150</small></div>
-    <div class="prog-sub" id="progSub">レップごとに1マス開きます</div>
+    <div class="prog-n" id="progN">0<small>/ 6 セット</small></div>
+    <div class="prog-sub" id="progSub">1セットで6マス開きます</div>
   </div>
   <div class="stage" id="stage">
     <div class="empty">画像がまだありません。<br>右上の設定から追加してください。</div>
@@ -298,7 +236,7 @@
   <div class="legend">
     <span><i class="swatch" style="background:var(--panel-2)"></i>予定日</span>
     <span><i class="swatch" style="background:#2f5a4c"></i>途中</span>
-    <span><i class="swatch" style="background:var(--accent)"></i>達成</span>
+    <span><i class="swatch" style="background:var(--accent)"></i>全セット完了</span>
   </div>
 </section>
 
@@ -308,7 +246,7 @@
 
     <div class="field">
       <div class="toggle">
-        <div class="lab">デバッグモード<small>任意の日・任意の種目を自由に増減できます。通常は切っておいてください。</small></div>
+        <div class="lab">デバッグモード<small>任意の日・任意のメニューのセットを自由に増減できます。通常は切っておいてください。</small></div>
         <button class="switch" id="debugSwitch" aria-label="デバッグモード"></button>
       </div>
     </div>
@@ -320,9 +258,9 @@
     </div>
 
     <div class="field">
-      <label>1枚あたりのレップ数（マス数）</label>
-      <div class="seg" id="tileSeg"></div>
-      <p class="note" id="tileNote" style="margin-top:8px"></p>
+      <label>1枚あたりのセット数</label>
+      <div class="seg" id="setSeg"></div>
+      <p class="note" id="setNote" style="margin-top:8px"></p>
     </div>
 
     <div class="field">
@@ -346,34 +284,35 @@
   "use strict";
 
   var DOW = ["日", "月", "火", "水", "木", "金", "土"];
-  var TILE_CHOICES = [60, 150, 300];
-  var LS_SETTINGS = "wt.settings.v2";
-  var LS_LOG = "wt.log.v2";
+  var TILES_PER_SET = 6;
+  var SET_CHOICES = [6, 12, 24];
+  var LS_SETTINGS = "wt.settings.v3";
+  var LS_LOG = "wt.log.v3";
 
-  var ABS = { id: "abs", name: "ニートゥチェスト", target: 10, note: "腹。どの回でも最後に" };
+  var ABS = { id: "abs", name: "ニートゥチェスト", reps: 10, note: "腹。どの回でも最後に" };
 
   var SESSIONS = [
     {
       id: "chest", label: "胸の日",
       moves: [
-        { id: "pushup", name: "腕立て伏せ", target: 10, note: "きつければ膝をついて" },
-        { id: "kickback", name: "キックバック", target: 20, note: "左右10回ずつ。ペットボトルを持つ" },
+        { id: "pushup", name: "腕立て伏せ", reps: 10, note: "きつければ膝をついて" },
+        { id: "kickback", name: "キックバック", reps: 20, note: "左右10回ずつ。ペットボトルを持つ" },
         ABS
       ]
     },
     {
       id: "legs", label: "脚の日",
       moves: [
-        { id: "squat", name: "スクワット", target: 10, note: "椅子に座って立つ動作から" },
-        { id: "calf", name: "カーフレイズ", target: 15, note: "かかとの上げ下げ" },
+        { id: "squat", name: "スクワット", reps: 10, note: "椅子に座って立つ動作から" },
+        { id: "calf", name: "カーフレイズ", reps: 15, note: "かかとの上げ下げ" },
         ABS
       ]
     },
     {
       id: "back", label: "背中の日",
       moves: [
-        { id: "row", name: "ベントオーバーローイング", target: 20, note: "左右10回ずつ。ペットボトルを持つ" },
-        { id: "backext", name: "バックエクステンション", target: 10, note: "うつ伏せから上体を反らす" },
+        { id: "row", name: "ベントオーバーローイング", reps: 20, note: "左右10回ずつ。ペットボトルを持つ" },
+        { id: "backext", name: "バックエクステンション", reps: 10, note: "うつ伏せから上体を反らす" },
         ABS
       ]
     }
@@ -392,11 +331,11 @@
   /* ---------- storage ---------- */
 
   function loadSettings() {
-    var d = { days: [1, 3, 5], tiles: 150, debug: false };
+    var d = { days: [1, 3, 5], sets: 6, debug: false };
     try {
       var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
       if (Array.isArray(s.days) && s.days.length) d.days = s.days;
-      if (TILE_CHOICES.indexOf(s.tiles) >= 0) d.tiles = s.tiles;
+      if (SET_CHOICES.indexOf(s.sets) >= 0) d.sets = s.sets;
       d.debug = !!s.debug;
     } catch (e) {}
     return d;
@@ -438,7 +377,7 @@
   function today() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
   function fromKey(k) { var p = k.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
 
-  /* ---------- session mapping ---------- */
+  /* ---------- sessions ---------- */
 
   function plannedDays() { return settings.days.slice().sort(function (a, b) { return a - b; }); }
 
@@ -448,38 +387,34 @@
     if (i < 0) return null;
     return SESSIONS[i % SESSIONS.length];
   }
-
   function sessionById(id) {
     for (var i = 0; i < SESSIONS.length; i++) if (SESSIONS[i].id === id) return SESSIONS[i];
     return SESSIONS[0];
   }
 
-  /* ---------- reps ---------- */
+  /* ---------- sets ---------- */
 
-  function repsOn(k, moveId) {
-    return (log[k] && log[k][moveId]) || 0;
-  }
+  function setsOn(k, moveId) { return (log[k] && log[k][moveId]) || 0; }
 
-  function dayTotal(k) {
+  function daySets(k) {
     var o = log[k], n = 0;
     if (!o) return 0;
     for (var m in o) if (Object.prototype.hasOwnProperty.call(o, m)) n += o[m];
     return n;
   }
 
-  function dayTarget(date) {
+  function dayTargetSets(date) {
     var s = sessionFor(date);
-    if (!s) return 0;
-    return s.moves.reduce(function (a, m) { return a + m.target; }, 0);
+    return s ? s.moves.length : 0;
   }
 
-  function totalReps() {
+  function totalSets() {
     var n = 0;
-    for (var k in log) if (Object.prototype.hasOwnProperty.call(log, k)) n += dayTotal(k);
+    for (var k in log) if (Object.prototype.hasOwnProperty.call(log, k)) n += daySets(k);
     return n;
   }
 
-  function addRep(k, moveId, delta) {
+  function addSet(k, moveId, delta) {
     if (!log[k]) log[k] = {};
     var v = (log[k][moveId] || 0) + delta;
     if (v <= 0) delete log[k][moveId]; else log[k][moveId] = v;
@@ -487,7 +422,7 @@
     saveLog();
   }
 
-  /* ---------- images ---------- */
+  /* ---------- reveal math ---------- */
 
   function order(id, total) {
     var seed = 0;
@@ -509,19 +444,20 @@
   }
 
   function gridOf(total) {
-    if (total === 60) return 6;
-    if (total === 150) return 10;
-    return 15;
+    if (total === 36) return 6;
+    if (total === 72) return 8;
+    return 12;
   }
 
   // 1枚を開ききった直後は、次の1枚へ進まずに完成した絵を出したままにする
   function progress() {
-    var total = settings.tiles;
-    var all = totalReps();
+    var total = settings.sets * TILES_PER_SET;
+    var done = totalSets();
+    var all = done * TILES_PER_SET;
     var idx = Math.floor(all / total);
     var revealed = all - idx * total;
     if (revealed === 0 && idx > 0) { idx -= 1; revealed = total; }
-    return { total: total, all: all, idx: idx, revealed: revealed };
+    return { total: total, all: all, idx: idx, revealed: revealed, doneSets: done };
   }
 
   /* ---------- render: reveal ---------- */
@@ -529,23 +465,27 @@
   function renderReveal() {
     var stage = document.getElementById("stage");
     var p = progress();
-    var total = p.total, all = p.all, idx = p.idx, revealed = p.revealed;
+    var total = p.total, idx = p.idx, revealed = p.revealed;
+    var setsShown = Math.round(revealed / TILES_PER_SET);
+
+    document.getElementById("progN").innerHTML =
+      setsShown + '<small>/ ' + settings.sets + " セット</small>";
 
     if (!images.length) {
       stage.innerHTML = '<div class="empty">画像がまだありません。<br>右上の設定から追加してください。</div>';
-      document.getElementById("progN").innerHTML = all + '<small>/ ' + total + "</small>";
-      document.getElementById("progSub").textContent = "レップごとに1マス開きます";
+      document.getElementById("progSub").textContent = "1セットで" + TILES_PER_SET + "マス開きます";
+      delete stage.dataset.im;
       lastRevealed = -1;
       return;
     }
 
-    var finished = idx >= images.length;
+    var overflow = idx >= images.length;
     var im = images[Math.min(idx, images.length - 1)];
-    if (finished) revealed = total;
+    if (overflow) revealed = total;
 
-    var cols = gridOf(total);
-    var rows = total / cols;
     var ord = order(im.id, total);
+    var posOf = new Array(total);
+    for (var q = 0; q < total; q++) posOf[ord[q]] = q;
     var open = {};
     for (var i = 0; i < revealed; i++) open[ord[i]] = true;
 
@@ -553,27 +493,23 @@
       var media = im.type === "video"
         ? '<video muted loop playsinline autoplay preload="auto"><source src="' + urlFor(im) + '" type="' + (im.mime || "video/mp4") + '"></video>'
         : '<img src="' + urlFor(im) + '" alt="">';
-      var t = '<div class="tiles" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr)">';
+      var cols = gridOf(total);
+      var t = '<div class="tiles" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + (total / cols) + ',1fr)">';
       for (var c = 0; c < total; c++) t += '<div class="tile"></div>';
-      t += "</div>";
-      stage.innerHTML = media + t;
+      stage.innerHTML = media + t + "</div>";
       stage.dataset.im = im.id;
       stage.dataset.total = String(total);
       lastRevealed = -1;
       var v = stage.querySelector("video");
-      if (v) { v.play().catch(function () {}); }
+      if (v) v.play().catch(function () {});
     }
-
-    var posOf = new Array(total);
-    for (var q = 0; q < total; q++) posOf[ord[q]] = q;
 
     var tiles = stage.querySelector(".tiles");
     var stagger = lastRevealed >= 0 && revealed > lastRevealed;
     for (var j = 0; j < total; j++) {
       var el = tiles.children[j];
-      var pos = posOf[j];
       if (stagger && !el.classList.contains("open") && open[j]) {
-        el.style.transitionDelay = Math.min((pos - lastRevealed) * 70, 1400) + "ms";
+        el.style.transitionDelay = Math.min((posOf[j] - lastRevealed) * 90, 1600) + "ms";
       } else {
         el.style.transitionDelay = "0ms";
       }
@@ -590,15 +526,15 @@
       }
       banner.textContent = idx >= images.length - 1
         ? "全部開ききりました。設定から追加できます"
-        : "完成しました。次のレップから次の1枚へ";
+        : "完成しました。次のセットから次の1枚へ";
     } else if (banner) {
       banner.remove();
     }
 
-    document.getElementById("progN").innerHTML = revealed + '<small>/ ' + total + "</small>";
     document.getElementById("progSub").textContent =
-      revealed >= total ? Math.max(0, images.length - idx - 1) + " 枚が未開封"
-        : "あと " + (total - revealed) + " レップで完成";
+      revealed >= total
+        ? Math.max(0, images.length - idx - 1) + " 枚が未開封"
+        : "あと " + (settings.sets - setsShown) + " セットで完成";
   }
 
   /* ---------- render: session ---------- */
@@ -607,7 +543,6 @@
     if (settings.debug && selDate) return fromKey(selDate);
     return today();
   }
-
   function activeSession(date) {
     if (settings.debug) return selSession ? sessionById(selSession) : (sessionFor(date) || SESSIONS[0]);
     return sessionFor(date);
@@ -639,22 +574,28 @@
       return;
     }
 
-    document.getElementById("sessTitle").textContent = sess.label;
+    document.getElementById("sessTitle").textContent =
+      sess.label + "（" + sess.moves.length + "セット）";
 
     moves.innerHTML = sess.moves.map(function (m) {
-      var n = repsOn(k, m.id);
-      var capped = !settings.debug && n >= m.target;
+      var n = setsOn(k, m.id);
+      var ctl;
+      if (settings.debug) {
+        ctl = '<button class="step" data-d="-1"' + (n <= 0 ? " disabled" : "") + ">−1</button>" +
+          '<button class="wide plus" data-d="1">セット追加</button>';
+      } else if (n > 0) {
+        ctl = '<button class="wide undo" data-d="-1">完了 ✓　取り消す</button>';
+      } else {
+        ctl = '<button class="wide plus" data-d="1">セット完了</button>';
+      }
       return '<div class="move" data-move="' + m.id + '">' +
         '<div class="move-top"><div>' +
         '<div class="move-name">' + m.name + "</div>" +
-        '<div class="move-note">' + m.note + "</div></div>" +
-        '<div class="move-n' + (n >= m.target ? " full" : "") + '">' + n +
-        "<small> / " + m.target + "</small></div></div>" +
-        '<div class="ctl">' +
-        '<button class="minus" data-d="-1"' + (n <= 0 ? " disabled" : "") + ">−1</button>" +
-        '<button class="plus" data-d="1"' + (capped ? " disabled" : "") + ">+1</button>" +
-        '<button class="set" data-d="set"' + (capped ? " disabled" : "") + ">+" + m.target + "</button>" +
-        "</div></div>";
+        '<div class="move-note">' + m.note + "</div>" +
+        (settings.debug && n > 0 ? '<div class="move-sets">' + n + " セット記録済み</div>" : "") +
+        "</div>" +
+        '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
+        '<div class="ctl">' + ctl + "</div></div>";
     }).join("");
   }
 
@@ -680,8 +621,8 @@
       var date = new Date(viewYear, viewMonth, d);
       var k = key(date);
       var planned = !!sessionFor(date);
-      var got = dayTotal(k);
-      var tgt = dayTarget(date) || 1;
+      var got = daySets(k);
+      var tgt = dayTargetSets(date) || 1;
       var cls = "day in";
       if (planned) cls += " planned";
       if (got > 0 && got < tgt) cls += " part";
@@ -729,18 +670,15 @@
       return '<button data-dow="' + i + '" class="' + (settings.days.indexOf(i) >= 0 ? "on" : "") + '">' + d + "</button>";
     }).join("");
 
-    document.getElementById("tileSeg").innerHTML = TILE_CHOICES.map(function (n) {
-      return '<button data-tiles="' + n + '" class="' + (settings.tiles === n ? "on" : "") + '">' + n + "</button>";
+    document.getElementById("setSeg").innerHTML = SET_CHOICES.map(function (n) {
+      return '<button data-sets="' + n + '" class="' + (settings.sets === n ? "on" : "") + '">' + n + "</button>";
     }).join("");
 
-    var perWeek = plannedDays().reduce(function (a, dw) {
-      var s = sessionFor(new Date(2026, 0, 4 + dw));
-      return a + (s ? s.moves.reduce(function (x, m) { return x + m.target; }, 0) : 0);
-    }, 0);
-    document.getElementById("tileNote").textContent = perWeek
-      ? "今の設定だと週 " + perWeek + " レップ。1枚あたり約 " +
-        Math.max(1, Math.round(settings.tiles / perWeek)) + " 週間で完成します。"
-      : "";
+    var perSession = 3;
+    var sessions = Math.ceil(settings.sets / perSession);
+    document.getElementById("setNote").textContent =
+      "1セットで " + TILES_PER_SET + " マス、合計 " + (settings.sets * TILES_PER_SET) +
+      " マス。1回のトレーニングで " + perSession + " セットなので、約 " + sessions + " 回で1枚が完成します。";
 
     renderImageList();
   }
@@ -764,18 +702,11 @@
     var k = key(date);
     var sess = activeSession(date);
     if (!sess) return;
-    var moveId = wrap.dataset.move;
-    var move = null;
-    sess.moves.forEach(function (m) { if (m.id === moveId) move = m; });
-    if (!move) return;
 
-    var d = b.dataset.d === "set" ? move.target : Number(b.dataset.d);
-    if (d > 0 && !settings.debug) {
-      var room = move.target - repsOn(k, moveId);
-      if (room <= 0) return;
-      d = Math.min(d, room);
-    }
-    addRep(k, moveId, d);
+    var moveId = wrap.dataset.move;
+    var d = Number(b.dataset.d);
+    if (d > 0 && !settings.debug && setsOn(k, moveId) >= 1) return;
+    addSet(k, moveId, d);
     renderAll();
   });
 
@@ -791,7 +722,7 @@
     if (!b || b.disabled || !b.dataset.k) return;
     selDate = b.dataset.k;
     var s = sessionFor(fromKey(selDate));
-    selSession = s ? s.id : selSession;
+    if (s) selSession = s.id;
     renderAll();
   });
 
@@ -843,10 +774,10 @@
     renderAll();
   });
 
-  document.getElementById("tileSeg").addEventListener("click", function (e) {
-    var b = e.target.closest("[data-tiles]");
+  document.getElementById("setSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-sets]");
     if (!b) return;
-    settings.tiles = Number(b.dataset.tiles);
+    settings.sets = Number(b.dataset.sets);
     saveSettings();
     renderSettings();
     renderAll();
@@ -889,8 +820,7 @@
     tx("readwrite", function (s) { return s.delete(id); }).then(function () {
       images = images.filter(function (im) { return im.id !== id; });
       if (urls[id]) { URL.revokeObjectURL(urls[id]); delete urls[id]; }
-      var stage = document.getElementById("stage");
-      delete stage.dataset.im;
+      delete document.getElementById("stage").dataset.im;
       renderImageList();
       renderAll();
     });
