@@ -133,6 +133,7 @@
   var images = [];
   var urls = {};
   var db = null;
+  var dbReady = null;
   var lastRevealed = -1;
   var selDate = null;
   var selSession = null;
@@ -623,12 +624,18 @@
   });
 
   document.getElementById("fileInput").addEventListener("change", function (e) {
-    var files = e.target.files;
+    // File の参照を先に配列へ写してから入力欄を空にする。
+    // 順番を逆にすると value を空にした時点で選択が消え、何も保存されない。
+    var list = e.target.files ? Array.prototype.slice.call(e.target.files) : [];
     e.target.value = "";
-    if (!files || !files.length || !db) return;
-    var jobs = [];
-    for (var i = 0; i < files.length; i++) {
-      (function (f) {
+    if (!list.length) return;
+
+    (dbReady || Promise.resolve()).then(function () {
+      if (!db) {
+        alert("この環境では保存できません。プライベートブラウズを解除して開いてください。");
+        return;
+      }
+      var jobs = list.map(function (f) {
         var rec = {
           id: String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8),
           name: f.name || "ファイル",
@@ -637,14 +644,16 @@
           type: (f.type || "").indexOf("video") === 0 ? "video" : "image",
           added: Date.now()
         };
-        jobs.push(tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; }));
-      })(files[i]);
-    }
-    Promise.all(jobs).then(function (recs) {
-      images = images.concat(recs);
-      delete document.getElementById("stage").dataset.im;
-      renderImageList();
-      renderAll();
+        return tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; });
+      });
+      return Promise.all(jobs).then(function (recs) {
+        images = images.concat(recs);
+        delete document.getElementById("stage").dataset.im;
+        renderImageList();
+        renderAll();
+      });
+    }).catch(function () {
+      alert("保存に失敗しました。空き容量を確認してください。");
     });
   });
 
@@ -672,7 +681,7 @@
   renderDow();
   renderAll();
 
-  openDB().then(function (d) {
+  dbReady = openDB().then(function (d) {
     db = d;
     return tx("readonly", function (s) { return s.getAll(); });
   }).then(function (recs) {
