@@ -525,12 +525,16 @@
     return cv;
   }
 
-  // 削っている途中の区画の、筆先がどこにいるか
+  // 削っている途中の区画の、筆先がどこにいるか。
+  // 光は削っている当の区画の中を通る。外へはみ出すと、どこを削っているか分からなくなる。
   function brushAt(t, k) {
-    var pad = t.h * 0.34;
+    // 端で止めると光が隣のマスへ半分はみ出すので、少し内側を通す。
+    // 削る線は筆が太く端が丸いので、内側を通してもマスは端まで削れる。
+    var inset = Math.min(t.w * 0.26, t.h * 0.30);
+    var kk = Math.max(0, Math.min(1, k));
     return {
-      x: t.x - pad + (t.w + pad * 2) * k,
-      y: t.y + t.h / 2 + Math.sin(k * 6.2) * t.h * 0.14
+      x: t.x + inset + (t.w - inset * 2) * kk,
+      y: t.y + t.h / 2 + Math.sin(kk * 6.2) * t.h * 0.16
     };
   }
 
@@ -617,8 +621,8 @@
       if (partial && idx < total) {
         var t = tileRect(ord[idx], cols, rows, w, h);
         var q = brushAt(t, k);
-        glow(fx, q.x, q.y, t.h * 0.85, 0.85);
-        glow(fx, q.x, q.y, t.h * 0.32, 1);
+        glow(fx, q.x, q.y, t.h * 0.62, 0.85);
+        glow(fx, q.x, q.y, t.h * 0.24, 1);
       }
 
       if (el < span) scratchRAF = requestAnimationFrame(frame);
