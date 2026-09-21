@@ -3,341 +3,62 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="kintore demo">
+<meta name="theme-color" content="#14161a">
 <title>kintore-checker demo</title>
-<style>
-  :root {
-    --bg: #14161a;
-    --panel: #1d2026;
-    --panel-2: #262a32;
-    --line: #333944;
-    --text: #e8eaee;
-    --muted: #949cab;
-    --accent: #4ec9a5;
-    --accent-ink: #0d1512;
-  }
-
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: var(--bg); }
-
-  body {
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
-    font-size: 16px; line-height: 1.6;
-    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(32px + env(safe-area-inset-bottom, 0px));
-    max-width: 560px; margin: 0 auto;
-    -webkit-text-size-adjust: 100%;
-    -webkit-user-select: none; user-select: none;
-  }
-
-  h1 { font-size: 1.05rem; margin: 0; font-weight: 700; }
-  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
-
-  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-  .badge { font-size: 0.66rem; letter-spacing: 0.1em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 10px; }
-
-  .card { background: var(--panel); border-radius: 16px; padding: 14px; margin-bottom: 14px; }
-
-  .prog { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
-  .prog-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.3rem; }
-  .prog-n small { font-weight: 400; font-size: 0.78rem; color: var(--muted); margin-left: 3px; }
-  .prog-sub { font-size: 0.76rem; color: var(--muted); text-align: right; }
-
-  .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
-  .stage svg.art, .stage img.art, .stage video.art { display: block; width: 100%; height: auto; }
-
-  .mediarow { display: flex; gap: 8px; margin-top: 11px; }
-  .mediarow button { flex: 1; padding: 11px; border-radius: 10px; background: var(--panel-2); font-size: 0.82rem; }
-  .mediarow button:disabled { opacity: 0.35; }
-  .mediarow button:active:not(:disabled) { filter: brightness(1.18); }
-  input[type="file"] { display: none; }
-  .tiles { position: absolute; inset: 0; display: grid; pointer-events: none; }
-  .tile { background: var(--panel-2); transition: opacity 520ms ease; }
-  .tile.open { opacity: 0; }
-  .done-banner { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px; background: rgba(20,22,26,0.88); font-size: 0.85rem; text-align: center; }
-
-  .sess-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-  .sess-title { font-weight: 700; font-size: 0.98rem; }
-  .sess-date { font-size: 0.76rem; color: var(--muted); }
-
-  .move { padding: 13px 0; border-top: 1px solid var(--line); }
-  .move:first-of-type { border-top: none; padding-top: 0; }
-  .move-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
-  .move-name { font-weight: 500; font-size: 0.93rem; }
-  .move-note { font-size: 0.72rem; color: var(--muted); }
-  .move-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; flex: none; }
-  .move-n small { font-weight: 400; font-size: 0.74rem; color: var(--muted); margin-left: 1px; }
-
-  .ctl button { display: block; width: 100%; border-radius: 10px; background: var(--accent); color: var(--accent-ink); padding: 13px 0; font-size: 0.88rem; font-weight: 700; }
-  .ctl button.undo { background: var(--panel-2); color: var(--muted); font-weight: 500; }
-  .ctl button:active { filter: brightness(1.18); }
-
-  .row { display: flex; gap: 8px; margin-top: 14px; }
-  .row button { flex: 1; padding: 11px; border-radius: 10px; background: var(--panel-2); font-size: 0.82rem; color: var(--muted); }
-  .row button:disabled { opacity: 0.35; }
-
-  .hint { font-size: 0.78rem; color: var(--muted); line-height: 1.75; margin: 0; }
-  .hint b { color: var(--text); font-weight: 500; }
-</style>
+<link rel="stylesheet" href="./app.css">
 </head>
 <body>
+<div id="app"></div>
 
-<div class="topbar">
-  <h1>kintore-checker</h1>
-  <span class="badge">DEMO</span>
-</div>
+<template id="sampleArt">
+  <svg class="art" viewBox="0 0 600 750" xmlns="http://www.w3.org/2000/svg" aria-label="サンプル素材">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2a1b4d"/>
+        <stop offset="45%" stop-color="#8e3d6b"/>
+        <stop offset="72%" stop-color="#e2705a"/>
+        <stop offset="100%" stop-color="#f6b263"/>
+      </linearGradient>
+      <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e09a5c"/>
+        <stop offset="100%" stop-color="#2d1f42"/>
+      </linearGradient>
+    </defs>
+    <rect width="600" height="750" fill="url(#sky)"/>
+    <circle cx="300" cy="455" r="92" fill="#ffd98a"/>
+    <g fill="#ffffff" opacity="0.85">
+      <circle cx="92" cy="78" r="2.4"/><circle cx="188" cy="140" r="1.7"/>
+      <circle cx="286" cy="62" r="2"/><circle cx="402" cy="122" r="2.6"/>
+      <circle cx="498" cy="70" r="1.8"/><circle cx="540" cy="186" r="2.1"/>
+      <circle cx="60" cy="210" r="1.6"/><circle cx="352" cy="196" r="1.5"/>
+    </g>
+    <g fill="#2b1c3f">
+      <path d="M0 470 L128 322 L214 424 L286 350 L392 470 Z"/>
+      <path d="M300 470 L398 336 L470 410 L534 352 L600 470 Z"/>
+    </g>
+    <g fill="#442a5c">
+      <path d="M0 500 L96 404 L206 500 Z"/>
+      <path d="M398 500 L500 398 L600 500 Z"/>
+    </g>
+    <rect y="500" width="600" height="250" fill="url(#sea)"/>
+    <g fill="#ffd98a" opacity="0.5">
+      <rect x="262" y="520" width="76" height="7" rx="3.5"/>
+      <rect x="248" y="546" width="104" height="6" rx="3"/>
+      <rect x="270" y="572" width="60" height="5" rx="2.5"/>
+      <rect x="238" y="598" width="124" height="6" rx="3"/>
+      <rect x="278" y="626" width="44" height="4" rx="2"/>
+      <rect x="252" y="652" width="96" height="5" rx="2.5"/>
+    </g>
+    <g fill="#1a1028">
+      <path d="M0 690 L70 660 L150 700 L232 668 L318 704 L410 666 L502 702 L600 672 L600 750 L0 750 Z"/>
+    </g>
+  </svg>
+</template>
 
-<section class="card">
-  <div class="prog">
-    <div class="prog-n" id="progN">0<small>/ 6 セット</small></div>
-    <div class="prog-sub" id="progSub">—</div>
-  </div>
-  <div class="stage" id="stage">
-    <svg class="art" viewBox="0 0 600 750" xmlns="http://www.w3.org/2000/svg" aria-label="デモ用の仮画像">
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#2a1b4d"/>
-          <stop offset="45%" stop-color="#8e3d6b"/>
-          <stop offset="72%" stop-color="#e2705a"/>
-          <stop offset="100%" stop-color="#f6b263"/>
-        </linearGradient>
-        <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#e09a5c"/>
-          <stop offset="100%" stop-color="#2d1f42"/>
-        </linearGradient>
-      </defs>
-      <rect width="600" height="750" fill="url(#sky)"/>
-      <circle cx="300" cy="455" r="92" fill="#ffd98a"/>
-      <g fill="#ffffff" opacity="0.85">
-        <circle cx="92" cy="78" r="2.4"/><circle cx="188" cy="140" r="1.7"/>
-        <circle cx="286" cy="62" r="2"/><circle cx="402" cy="122" r="2.6"/>
-        <circle cx="498" cy="70" r="1.8"/><circle cx="540" cy="186" r="2.1"/>
-        <circle cx="60" cy="210" r="1.6"/><circle cx="352" cy="196" r="1.5"/>
-      </g>
-      <g fill="#2b1c3f">
-        <path d="M0 470 L128 322 L214 424 L286 350 L392 470 Z"/>
-        <path d="M300 470 L398 336 L470 410 L534 352 L600 470 Z"/>
-      </g>
-      <g fill="#442a5c">
-        <path d="M0 500 L96 404 L206 500 Z"/>
-        <path d="M398 500 L500 398 L600 500 Z"/>
-      </g>
-      <rect y="500" width="600" height="250" fill="url(#sea)"/>
-      <g fill="#ffd98a" opacity="0.5">
-        <rect x="262" y="520" width="76" height="7" rx="3.5"/>
-        <rect x="248" y="546" width="104" height="6" rx="3"/>
-        <rect x="270" y="572" width="60" height="5" rx="2.5"/>
-        <rect x="238" y="598" width="124" height="6" rx="3"/>
-        <rect x="278" y="626" width="44" height="4" rx="2"/>
-        <rect x="252" y="652" width="96" height="5" rx="2.5"/>
-      </g>
-      <g fill="#1a1028">
-        <path d="M0 690 L70 660 L150 700 L232 668 L318 704 L410 666 L502 702 L600 672 L600 750 L0 750 Z"/>
-      </g>
-    </svg>
-    <div class="tiles" id="tiles"></div>
-  </div>
-  <div class="mediarow">
-    <button id="pick">画像・動画を選ぶ</button>
-    <button id="restore" disabled>仮画像に戻す</button>
-  </div>
-  <input type="file" id="fileInput" accept="image/*,video/*">
-</section>
-
-<section class="card">
-  <div class="sess-head">
-    <div class="sess-title">脚の日（3セット）</div>
-    <div class="sess-date" id="dayLabel">1日目</div>
-  </div>
-  <div id="moves"></div>
-  <div class="row">
-    <button id="nextDay">次のトレーニング日へ</button>
-    <button id="reset">最初に戻す</button>
-  </div>
-</section>
-
-<p class="hint">
-  <b>1セット完了で6マス開きます。</b>
-  1回のトレーニングは3セットなので18マス、2回で1枚が完成します。
-  本番では、その日のメニューのセットしか完了にできません。
-  <br>
-  選んだ画像・動画はこのデモでは保存されず、ページを閉じると仮画像に戻ります。
-  端末の外に出ることはありません。
-</p>
-
-<script>
-(function () {
-  "use strict";
-
-  var TILES_PER_SET = 6;
-  var SETS = 6;
-  var TOTAL = SETS * TILES_PER_SET;
-  var COLS = 6;
-
-  var MOVES = [
-    { id: "squat", name: "スクワット", reps: 10, note: "椅子に座って立つ動作から" },
-    { id: "calf", name: "カーフレイズ", reps: 15, note: "かかとの上げ下げ" },
-    { id: "abs", name: "ニートゥチェスト", reps: 10, note: "腹。どの回でも最後に" }
-  ];
-
-  var banked = 0;
-  var day = 1;
-  var done = {};
-
-  function order(total) {
-    var seed = 20260922;
-    var arr = [];
-    for (var j = 0; j < total; j++) arr.push(j);
-    for (var k = total - 1; k > 0; k--) {
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      var m = seed % (k + 1);
-      var t = arr[k]; arr[k] = arr[m]; arr[m] = t;
-    }
-    return arr;
-  }
-
-  var ORD = order(TOTAL);
-  var POS = new Array(TOTAL);
-  for (var q = 0; q < TOTAL; q++) POS[ORD[q]] = q;
-
-  var tiles = document.getElementById("tiles");
-  tiles.style.gridTemplateColumns = "repeat(" + COLS + ",1fr)";
-  tiles.style.gridTemplateRows = "repeat(" + (TOTAL / COLS) + ",1fr)";
-  var h = "";
-  for (var i = 0; i < TOTAL; i++) h += '<div class="tile"></div>';
-  tiles.innerHTML = h;
-
-  var last = 0;
-
-  function sets() {
-    var n = banked;
-    MOVES.forEach(function (m) { if (done[m.id]) n += 1; });
-    return Math.min(n, SETS);
-  }
-
-  function renderTiles() {
-    var n = sets() * TILES_PER_SET;
-    var open = {};
-    for (var i = 0; i < n; i++) open[ORD[i]] = true;
-
-    for (var j = 0; j < TOTAL; j++) {
-      var el = tiles.children[j];
-      if (n > last && !el.classList.contains("open") && open[j]) {
-        el.style.transitionDelay = Math.min((POS[j] - last) * 90, 1600) + "ms";
-      } else {
-        el.style.transitionDelay = "0ms";
-      }
-      el.classList.toggle("open", !!open[j]);
-    }
-    last = n;
-
-    var banner = document.querySelector(".done-banner");
-    if (n >= TOTAL) {
-      if (!banner) {
-        banner = document.createElement("div");
-        banner.className = "done-banner";
-        banner.textContent = "完成しました";
-        document.getElementById("stage").appendChild(banner);
-      }
-    } else if (banner) {
-      banner.remove();
-    }
-
-    document.getElementById("progN").innerHTML = sets() + '<small>/ ' + SETS + " セット</small>";
-    document.getElementById("progSub").textContent =
-      sets() >= SETS ? "開ききりました" : "あと " + (SETS - sets()) + " セットで完成";
-  }
-
-  function renderMoves() {
-    document.getElementById("dayLabel").textContent = day + "日目";
-    document.getElementById("moves").innerHTML = MOVES.map(function (m) {
-      var d = !!done[m.id];
-      return '<div class="move" data-move="' + m.id + '">' +
-        '<div class="move-top"><div>' +
-        '<div class="move-name">' + m.name + "</div>" +
-        '<div class="move-note">' + m.note + "</div></div>" +
-        '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
-        '<div class="ctl"><button class="' + (d ? "undo" : "") + '">' +
-        (d ? "完了 ✓　取り消す" : "セット完了") + "</button></div></div>";
-    }).join("");
-    document.getElementById("nextDay").disabled = sets() >= SETS;
-  }
-
-  function render() { renderTiles(); renderMoves(); }
-
-  document.getElementById("moves").addEventListener("click", function (e) {
-    var wrap = e.target.closest("[data-move]");
-    if (!wrap || !e.target.closest("button")) return;
-    var id = wrap.dataset.move;
-    if (done[id]) delete done[id]; else done[id] = true;
-    render();
-  });
-
-  document.getElementById("nextDay").addEventListener("click", function () {
-    banked = sets();
-    done = {};
-    day += 1;
-    render();
-  });
-
-  document.getElementById("reset").addEventListener("click", function () {
-    banked = 0; done = {}; day = 1; last = 0;
-    render();
-  });
-
-  /* ---- 画像・動画の差し替え（このデモでは保存せず、開いている間だけ） ---- */
-
-  var stage = document.getElementById("stage");
-  var sampleArt = stage.querySelector("svg.art");
-  var pickedUrl = null;
-
-  function setMedia(node) {
-    var cur = stage.querySelector("svg.art, img.art, video.art");
-    if (cur) cur.remove();
-    stage.insertBefore(node, tiles);
-  }
-
-  document.getElementById("pick").addEventListener("click", function () {
-    document.getElementById("fileInput").click();
-  });
-
-  document.getElementById("fileInput").addEventListener("change", function (e) {
-    var f = e.target.files && e.target.files[0];
-    e.target.value = "";
-    if (!f) return;
-
-    if (pickedUrl) URL.revokeObjectURL(pickedUrl);
-    pickedUrl = URL.createObjectURL(f);
-
-    if ((f.type || "").indexOf("video") === 0) {
-      var v = document.createElement("video");
-      v.className = "art";
-      v.muted = true; v.loop = true; v.autoplay = true;
-      v.setAttribute("playsinline", "");
-      v.setAttribute("preload", "auto");
-      var s = document.createElement("source");
-      s.src = pickedUrl;
-      s.type = f.type;
-      v.appendChild(s);
-      setMedia(v);
-      v.play().catch(function () {});
-    } else {
-      var img = document.createElement("img");
-      img.className = "art";
-      img.alt = "";
-      img.src = pickedUrl;
-      setMedia(img);
-    }
-    document.getElementById("restore").disabled = false;
-  });
-
-  document.getElementById("restore").addEventListener("click", function () {
-    if (pickedUrl) { URL.revokeObjectURL(pickedUrl); pickedUrl = null; }
-    setMedia(sampleArt);
-    document.getElementById("restore").disabled = true;
-  });
-
-  render();
-})();
-</script>
+<script>window.KC_CONFIG = { demo: true };</script>
+<script src="./app.js"></script>
 </body>
 </html>
