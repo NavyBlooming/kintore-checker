@@ -14,6 +14,7 @@
   var DEMO = !!CFG.demo;
 
   var DOW = ["日", "月", "火", "水", "木", "金", "土"];
+  var TILES_PER_SET = 6;
   var SET_CHOICES = [6, 12, 24];
   var INTERVAL_CHOICES = [1, 2, 3];
   var INTERVAL_LABEL = { 1: "毎日", 2: "隔日", 3: "3日に1回" };
@@ -65,7 +66,7 @@
     '<section class="card">' +
       '<div class="prog">' +
         '<div class="prog-n" id="progN">0<small>/ 6 セット</small></div>' +
-        '<div class="prog-sub" id="progSub">1セットごとに覆いが削れます</div>' +
+        '<div class="prog-sub" id="progSub">1セットで6マス削れます</div>' +
       '</div>' +
       '<div class="stage" id="stage"></div>' +
       '<div class="medianav" id="mediaNav" hidden>' +
@@ -148,7 +149,7 @@
   var urls = {};
   var db = null;
   var dbReady = null;
-  var lastFrac = -1;
+  var lastTiles = -1;
   var selDate = null;
   var selSession = null;
   var viewYear, viewMonth;
@@ -355,7 +356,11 @@
   function progress() {
     var i = currentIndex();
     var sets = i < 0 ? Math.max(0, Math.min(settings.sets, settings.sampleSets || 0)) : setsOf(images[i]);
-    return { idx: i, sets: sets, frac: settings.sets ? sets / settings.sets : 0 };
+    return {
+      idx: i, sets: sets,
+      tiles: sets * TILES_PER_SET,
+      total: settings.sets * TILES_PER_SET
+    };
   }
 
   // Blob から一時URLを作る。同じ素材では使い回す
@@ -433,9 +438,7 @@
    */
 
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
-  var SCRATCH_MS = 900;
-  var BRUSH = 0.30;   // 筆の太さ（高さに対する比）。行の間隔より太くして塗り残しを防ぐ
-  var ROWS = 4;
+  var TILE_MS = 330;   // 1区画を削りきるまで。順に1区画ずつ進む
   var PINK = "255,92,166";
 
   var baked = null;       // ぼかした素材
@@ -478,16 +481,33 @@
     return c;
   }
 
-  // 蛇行する筆跡。t は 0〜1
-  function pathAt(w, h, t) {
-    var p = Math.max(0, Math.min(1, t)) * ROWS;
-    var i = Math.min(ROWS - 0.0001, p);
-    var row = Math.floor(i), f = i - row;
-    var y = h * (row + 0.5) / ROWS;
-    var dir = row % 2 ? -1 : 1;
-    var x0 = dir > 0 ? -w * 0.12 : w * 1.12;
-    var x1 = dir > 0 ? w * 1.12 : -w * 0.12;
-    return { x: x0 + (x1 - x0) * f, y: y + Math.sin(f * 7 + row) * h * 0.04 };
+  // 区画の並び。素材ごとに固定なので、開き直しても同じ順で開く
+  function order(id, total) {
+    var seed = 0;
+    for (var i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+    seed = (seed + total) >>> 0;
+    var arr = [];
+    for (var j = 0; j < total; j++) arr.push(j);
+    for (var k = total - 1; k > 0; k--) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      var m = seed % (k + 1);
+      var t = arr[k]; arr[k] = arr[m]; arr[m] = t;
+    }
+    return arr;
+  }
+
+  function gridOf(total) {
+    if (total === 36) return 6;
+    if (total === 72) return 8;
+    return 12;
+  }
+
+  // 区画の矩形。隣と1pxだけ重ねて、境目に覆いの筋が残らないようにする
+  function tileRect(i, cols, rows, w, h) {
+    var c = i % cols, r = Math.floor(i / cols);
+    var x0 = Math.round(c * w / cols), x1 = Math.round((c + 1) * w / cols);
+    var y0 = Math.round(r * h / rows), y1 = Math.round((r + 1) * h / rows);
+    return { x: x0 - 1, y: y0 - 1, w: x1 - x0 + 2, h: y1 - y0 + 2 };
   }
 
   function stageCanvas(stage, cls) {
@@ -505,35 +525,106 @@
     return cv;
   }
 
-  function paintCover(stage, mediaId, frac) {
+  // 削っている途中の区画の、筆先がどこにいるか
+  function brushAt(t, k) {
+    var pad = t.h * 0.34;
+    return {
+      x: t.x - pad + (t.w + pad * 2) * k,
+      y: t.y + t.h / 2 + Math.sin(k * 6.2) * t.h * 0.14
+    };
+  }
+
+  // revealed: 開ききった区画の数 / partial: 削っている最中の {index, k}
+  function paintCover(stage, mediaId, revealed, partial) {
     var w = stage.clientWidth, h = stage.clientHeight;
     if (!w || !h) return;
     var cov = bakeCover(stage, mediaId);
     if (!cov) return;
+
+    var total = settings.sets * TILES_PER_SET;
+    var cols = gridOf(total), rows = total / cols;
+    var ord = order(mediaId, total);
+
     var cv = stageCanvas(stage, "cover");
     var x = cv.getContext("2d");
     x.setTransform(DPR, 0, 0, DPR, 0, 0);
     x.globalCompositeOperation = "source-over";
     x.clearRect(0, 0, w, h);
     x.drawImage(cov, 0, 0, cov.width, cov.height, 0, 0, w, h);
-    if (frac <= 0) return;
 
     x.globalCompositeOperation = "destination-out";
-    x.lineCap = x.lineJoin = "round";
-    x.lineWidth = h * BRUSH;
-    x.beginPath();
-    var n = Math.max(2, Math.round(frac * 240));
-    for (var i = 0; i <= n; i++) {
-      var q = pathAt(w, h, frac * i / n);
-      if (i) x.lineTo(q.x, q.y); else x.moveTo(q.x, q.y);
+    var i, t;
+    for (i = 0; i < Math.min(revealed, total); i++) {
+      t = tileRect(ord[i], cols, rows, w, h);
+      x.fillRect(t.x, t.y, t.w, t.h);
     }
-    x.stroke();
-    // 終わり際に残りを飛ばして削り残しを作らない
-    if (frac > 0.94) {
-      x.fillStyle = "rgba(0,0,0," + ((frac - 0.94) / 0.06).toFixed(3) + ")";
-      x.fillRect(0, 0, w, h);
+    if (partial && partial.index < total) {
+      t = tileRect(ord[partial.index], cols, rows, w, h);
+      x.save();
+      x.beginPath();
+      x.rect(t.x, t.y, t.w, t.h);
+      x.clip();
+      x.lineCap = x.lineJoin = "round";
+      x.lineWidth = t.h * 1.05;
+      var p0 = brushAt(t, 0), p1 = brushAt(t, partial.k);
+      x.beginPath();
+      var n = Math.max(2, Math.round(partial.k * 14));
+      x.moveTo(p0.x, p0.y);
+      for (i = 1; i <= n; i++) {
+        var q = brushAt(t, partial.k * i / n);
+        x.lineTo(q.x, q.y);
+      }
+      x.stroke();
+      x.restore();
     }
     x.globalCompositeOperation = "source-over";
+  }
+
+  // from/to は開いた区画の数。1区画ずつ順に削る
+  function scratchTo(stage, mediaId, from, to) {
+    if (scratchRAF) { cancelAnimationFrame(scratchRAF); scratchRAF = 0; }
+    var w = stage.clientWidth, h = stage.clientHeight;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || !w || !h) { paintCover(stage, mediaId, to, null); clearFx(stage); return; }
+
+    var total = settings.sets * TILES_PER_SET;
+    var cols = gridOf(total), rows = total / cols;
+    var ord = order(mediaId, total);
+    var count = to - from;
+    var span = count * TILE_MS;
+
+    var fxcv = stageCanvas(stage, "fxlayer");
+    var fx = fxcv.getContext("2d");
+    fx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    fx.clearRect(0, 0, w, h);
+    var t0 = performance.now();
+
+    function frame(now) {
+      // rAF が渡す時刻は直前の performance.now() より前になることがある。
+      // そのまま計算すると経過時間が負になり、区画番号が -1 に落ちる。
+      var el = Math.max(0, Math.min(span, now - t0));
+      var done = Math.max(0, Math.min(count, Math.floor(el / TILE_MS)));
+      var k = Math.min(1, (el - done * TILE_MS) / TILE_MS);
+      var idx = from + done;
+      var partial = (done < count) ? { index: idx, k: k } : null;
+      paintCover(stage, mediaId, from + done, partial);
+
+      // 尾を引かせてから筆先を光らせる
+      fx.globalCompositeOperation = "destination-out";
+      fx.fillStyle = "rgba(0,0,0,0.16)";
+      fx.fillRect(0, 0, w, h);
+      fx.globalCompositeOperation = "source-over";
+      if (partial && idx < total) {
+        var t = tileRect(ord[idx], cols, rows, w, h);
+        var q = brushAt(t, k);
+        glow(fx, q.x, q.y, t.h * 0.85, 0.85);
+        glow(fx, q.x, q.y, t.h * 0.32, 1);
+      }
+
+      if (el < span) scratchRAF = requestAnimationFrame(frame);
+      else { scratchRAF = 0; paintCover(stage, mediaId, to, null); fadeOutFx(stage); }
+    }
+    scratchRAF = requestAnimationFrame(frame);
   }
 
   function clearFx(stage) {
@@ -543,40 +634,6 @@
     x.setTransform(DPR, 0, 0, DPR, 0, 0);
     x.globalCompositeOperation = "source-over";
     x.clearRect(0, 0, stage.clientWidth, stage.clientHeight);
-  }
-
-  function scratchTo(stage, mediaId, from, to) {
-    if (scratchRAF) { cancelAnimationFrame(scratchRAF); scratchRAF = 0; }
-    var w = stage.clientWidth, h = stage.clientHeight;
-    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || !w || !h) { paintCover(stage, mediaId, to); clearFx(stage); return; }
-
-    var fxcv = stageCanvas(stage, "fxlayer");
-    var fx = fxcv.getContext("2d");
-    fx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    fx.clearRect(0, 0, w, h);
-    var t0 = performance.now();
-
-    function frame(now) {
-      var k = Math.min(1, (now - t0) / SCRATCH_MS);
-      var frac = from + (to - from) * k;
-      paintCover(stage, mediaId, frac);
-
-      // 尾を引かせてから、筆先を光らせる
-      fx.globalCompositeOperation = "destination-out";
-      fx.fillStyle = "rgba(0,0,0,0.14)";
-      fx.fillRect(0, 0, w, h);
-      fx.globalCompositeOperation = "source-over";
-      if (k < 1) {
-        var q = pathAt(w, h, frac);
-        glow(fx, q.x, q.y, h * 0.22, 0.85);
-        glow(fx, q.x, q.y, h * 0.08, 1);
-      }
-
-      if (k < 1) scratchRAF = requestAnimationFrame(frame);
-      else { scratchRAF = 0; fadeOutFx(stage); }
-    }
-    scratchRAF = requestAnimationFrame(frame);
   }
 
   function fadeOutFx(stage) {
@@ -598,6 +655,7 @@
   }
 
   function glow(ctx, x, y, r, a) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(r) || r <= 0) return;
     var g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, "rgba(255,225,240," + a + ")");
     g.addColorStop(0.35, "rgba(" + PINK + "," + (a * 0.8).toFixed(3) + ")");
@@ -610,7 +668,7 @@
     var stage = document.getElementById("stage");
     if (!stage || !stage.dataset.im) return;
     bakedKey = "";                 // 大きさが変わったので焼き直す
-    paintCover(stage, stage.dataset.im, progress().frac);
+    paintCover(stage, stage.dataset.im, progress().tiles, null);
   }
 
   window.addEventListener("resize", refreshCover);
@@ -643,9 +701,9 @@
     var m = mediaFor(p.idx);
     if (!m) {
       stage.innerHTML = '<div class="empty">画像がまだありません。<br>右上の設定から追加してください。</div>';
-      document.getElementById("progSub").textContent = "1セットごとに覆いが削れます";
+      document.getElementById("progSub").textContent = "1セットで" + TILES_PER_SET + "マス削れます";
       delete stage.dataset.im;
-      lastFrac = -1;
+      lastTiles = -1;
       baked = null; bakedKey = "";
       return;
     }
@@ -655,22 +713,22 @@
       stage.innerHTML = mediaHtml(m);
       stage.dataset.im = m.id;
       baked = null; bakedKey = "";
-      lastFrac = -1;
+      lastTiles = -1;
       var v = stage.querySelector("video");
       if (v) v.play().catch(function () {});
       var im0 = stage.querySelector("img.art");
       if (im0 && !im0.complete) {
         im0.addEventListener("load", function () {
           baked = null; bakedKey = "";
-          paintCover(stage, m.id, progress().frac);
+          paintCover(stage, m.id, progress().tiles, null);
         });
       }
     }
 
-    // 進んだときだけ、なぞって削る演出を走らせる
-    if (lastFrac >= 0 && p.frac > lastFrac) scratchTo(stage, m.id, lastFrac, p.frac);
-    else { paintCover(stage, m.id, p.frac); clearFx(stage); }
-    lastFrac = p.frac;
+    // 進んだときだけ、区画を削る演出を走らせる
+    if (lastTiles >= 0 && p.tiles > lastTiles) scratchTo(stage, m.id, lastTiles, p.tiles);
+    else { paintCover(stage, m.id, p.tiles, null); clearFx(stage); }
+    lastTiles = p.tiles;
 
     var rest = 0;
     images.forEach(function (im) { if (!isFull(im)) rest += 1; });
@@ -882,7 +940,8 @@
     var perSession = 3;
     var sessions = Math.ceil(settings.sets / perSession);
     document.getElementById("setNote").textContent =
-      "1枚あたり " + settings.sets + " セット。1回のトレーニングで " + perSession + " セットなので、約 " + sessions + " 回" +
+      "1セットで " + TILES_PER_SET + " マス、合計 " + (settings.sets * TILES_PER_SET) +
+      " マス。1回のトレーニングで " + perSession + " セットなので、約 " + sessions + " 回" +
       (weekly ? "" : "（約 " + sessions * settings.interval + " 日）") + "で1枚が完成します。";
 
     renderImageList();
