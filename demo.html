@@ -43,7 +43,13 @@
   .prog-sub { font-size: 0.76rem; color: var(--muted); text-align: right; }
 
   .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
-  .stage svg.art { display: block; width: 100%; height: auto; }
+  .stage svg.art, .stage img.art, .stage video.art { display: block; width: 100%; height: auto; }
+
+  .mediarow { display: flex; gap: 8px; margin-top: 11px; }
+  .mediarow button { flex: 1; padding: 11px; border-radius: 10px; background: var(--panel-2); font-size: 0.82rem; }
+  .mediarow button:disabled { opacity: 0.35; }
+  .mediarow button:active:not(:disabled) { filter: brightness(1.18); }
+  input[type="file"] { display: none; }
   .tiles { position: absolute; inset: 0; display: grid; pointer-events: none; }
   .tile { background: var(--panel-2); transition: opacity 520ms ease; }
   .tile.open { opacity: 0; }
@@ -130,6 +136,11 @@
     </svg>
     <div class="tiles" id="tiles"></div>
   </div>
+  <div class="mediarow">
+    <button id="pick">画像・動画を選ぶ</button>
+    <button id="restore" disabled>仮画像に戻す</button>
+  </div>
+  <input type="file" id="fileInput" accept="image/*,video/*">
 </section>
 
 <section class="card">
@@ -148,6 +159,9 @@
   <b>1セット完了で6マス開きます。</b>
   1回のトレーニングは3セットなので18マス、2回で1枚が完成します。
   本番では、その日のメニューのセットしか完了にできません。
+  <br>
+  選んだ画像・動画はこのデモでは保存されず、ページを閉じると仮画像に戻ります。
+  端末の外に出ることはありません。
 </p>
 
 <script>
@@ -268,6 +282,58 @@
   document.getElementById("reset").addEventListener("click", function () {
     banked = 0; done = {}; day = 1; last = 0;
     render();
+  });
+
+  /* ---- 画像・動画の差し替え（このデモでは保存せず、開いている間だけ） ---- */
+
+  var stage = document.getElementById("stage");
+  var sampleArt = stage.querySelector("svg.art");
+  var pickedUrl = null;
+
+  function setMedia(node) {
+    var cur = stage.querySelector("svg.art, img.art, video.art");
+    if (cur) cur.remove();
+    stage.insertBefore(node, tiles);
+  }
+
+  document.getElementById("pick").addEventListener("click", function () {
+    document.getElementById("fileInput").click();
+  });
+
+  document.getElementById("fileInput").addEventListener("change", function (e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+
+    if (pickedUrl) URL.revokeObjectURL(pickedUrl);
+    pickedUrl = URL.createObjectURL(f);
+
+    if ((f.type || "").indexOf("video") === 0) {
+      var v = document.createElement("video");
+      v.className = "art";
+      v.muted = true; v.loop = true; v.autoplay = true;
+      v.setAttribute("playsinline", "");
+      v.setAttribute("preload", "auto");
+      var s = document.createElement("source");
+      s.src = pickedUrl;
+      s.type = f.type;
+      v.appendChild(s);
+      setMedia(v);
+      v.play().catch(function () {});
+    } else {
+      var img = document.createElement("img");
+      img.className = "art";
+      img.alt = "";
+      img.src = pickedUrl;
+      setMedia(img);
+    }
+    document.getElementById("restore").disabled = false;
+  });
+
+  document.getElementById("restore").addEventListener("click", function () {
+    if (pickedUrl) { URL.revokeObjectURL(pickedUrl); pickedUrl = null; }
+    setMedia(sampleArt);
+    document.getElementById("restore").disabled = true;
   });
 
   render();
