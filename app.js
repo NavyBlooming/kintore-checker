@@ -369,40 +369,70 @@
 
   // 未開封の区画だけを覆うマスクを組み立てる。
   // 区画ごとにぼかすと境目に継ぎ目が出るので、ぼかしは1枚の層でかけ、形だけマスクで抜く。
-  function frostMask(cols, rows, closed) {
-    var imgs = [], poss = [];
+  //
+  // 位置と大きさは % ではなくピクセルで出す。% だと区画の境界が小数ピクセルに落ち、
+  // 隣り合う矩形がその1ピクセルを半分ずつしか塗らないため、覆いが薄い筋になって残る
+  // （縦に長い画像で目立つ）。境界を BLEED 分だけ重ねて塗り残しをなくす。
+  var BLEED = 1;
+
+  function frostMask(cols, rows, closed, w, h) {
+    var imgs = [], sizes = [], poss = [];
     for (var i = 0; i < closed.length; i++) {
       var t = closed[i];
       var c = t % cols;
       var r = Math.floor(t / cols);
+      var x0 = Math.round(c * w / cols) - BLEED;
+      var x1 = Math.round((c + 1) * w / cols) + BLEED;
+      var y0 = Math.round(r * h / rows) - BLEED;
+      var y1 = Math.round((r + 1) * h / rows) + BLEED;
       imgs.push("linear-gradient(#000,#000)");
-      poss.push(
-        (cols > 1 ? (c * 100 / (cols - 1)) : 0).toFixed(3) + "% " +
-        (rows > 1 ? (r * 100 / (rows - 1)) : 0).toFixed(3) + "%"
-      );
+      sizes.push((x1 - x0) + "px " + (y1 - y0) + "px");
+      poss.push(x0 + "px " + y0 + "px");
     }
-    return {
-      image: imgs.join(","),
-      size: (100 / cols).toFixed(3) + "% " + (100 / rows).toFixed(3) + "%",
-      position: poss.join(",")
-    };
+    return { image: imgs.join(","), size: sizes.join(","), position: poss.join(",") };
   }
 
+  var frostState = null;
+
   function applyFrost(frost, cols, rows, closed, ratio) {
+    if (!frost) return;
+    frostState = { cols: cols, rows: rows, closed: closed, ratio: ratio };
     if (!closed.length) { frost.hidden = true; return; }
     frost.hidden = false;
-    var m = frostMask(cols, rows, closed);
+
+    var box = frost.getBoundingClientRect();
+    if (!box.width || !box.height) return; // まだ大きさが決まっていない。読み込み後に呼び直される
+
+    var m = frostMask(cols, rows, closed, box.width, box.height);
     frost.style.webkitMaskImage = m.image;
     frost.style.maskImage = m.image;
     frost.style.webkitMaskSize = m.size;
     frost.style.maskSize = m.size;
     frost.style.webkitMaskPosition = m.position;
     frost.style.maskPosition = m.position;
+
     // 進むほど残りのぼかしも少しずつ弱める
-    var px = Math.round(22 - 9 * ratio);
-    frost.style.webkitBackdropFilter = "blur(" + px + "px) saturate(0.88)";
-    frost.style.backdropFilter = "blur(" + px + "px) saturate(0.88)";
+    var px = Math.round(34 - 10 * ratio);
+    frost.style.webkitBackdropFilter = "blur(" + px + "px) saturate(0.85)";
+    frost.style.backdropFilter = "blur(" + px + "px) saturate(0.85)";
   }
+
+  // 素材の読み込みや画面の回転で大きさが変わったら、マスクを組み直す
+  function refreshFrost() {
+    if (!frostState) return;
+    applyFrost(document.getElementById("frost"),
+      frostState.cols, frostState.rows, frostState.closed, frostState.ratio);
+  }
+
+  function watchStageSize(stage) {
+    if (!window.ResizeObserver) return;
+    if (stage.dataset.watched) return;
+    stage.dataset.watched = "1";
+    new ResizeObserver(function () { refreshFrost(); }).observe(stage);
+  }
+
+  window.addEventListener("resize", refreshFrost);
+  window.addEventListener("orientationchange", refreshFrost);
 
   function setsOf(im) { return Math.max(0, Math.min(settings.sets, im.sets || 0)); }
   function isFull(im) { return setsOf(im) >= settings.sets; }
@@ -540,7 +570,13 @@
       stage.dataset.total = String(total);
       lastRevealed = -1;
       var v = stage.querySelector("video");
-      if (v) v.play().catch(function () {});
+      if (v) {
+        v.play().catch(function () {});
+        v.addEventListener("loadedmetadata", refreshFrost);
+      }
+      var im0 = stage.querySelector("img.art");
+      if (im0) im0.addEventListener("load", refreshFrost);
+      watchStageSize(stage);
     }
 
     var tiles = stage.querySelector(".tiles");
@@ -548,7 +584,7 @@
 
     // まず演出をすべて解除し、1回だけ再計算させてから付け直す
     for (var j = 0; j < total; j++) {
-      tiles.children[j].classList.remove("flip");
+      tiles.children[j].classList.remove("mist");
       tiles.children[j].style.animationDelay = "";
     }
     void tiles.offsetWidth;
@@ -558,8 +594,8 @@
       var el = tiles.children[k];
       if (open[k]) {
         if (stagger && posOf[k] >= lastRevealed) {
-          el.style.animationDelay = Math.min((posOf[k] - lastRevealed) * 120, 2200) + "ms";
-          el.classList.add("flip");
+          el.style.animationDelay = Math.min((posOf[k] - lastRevealed) * 130, 2400) + "ms";
+          el.classList.add("mist");
         }
       } else {
         closed.push(k);
