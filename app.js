@@ -364,6 +364,46 @@
     return 12;
   }
 
+  var CAN_BLUR = !!(window.CSS && CSS.supports &&
+    (CSS.supports("backdrop-filter", "blur(4px)") || CSS.supports("-webkit-backdrop-filter", "blur(4px)")));
+
+  // 未開封の区画だけを覆うマスクを組み立てる。
+  // 区画ごとにぼかすと境目に継ぎ目が出るので、ぼかしは1枚の層でかけ、形だけマスクで抜く。
+  function frostMask(cols, rows, closed) {
+    var imgs = [], poss = [];
+    for (var i = 0; i < closed.length; i++) {
+      var t = closed[i];
+      var c = t % cols;
+      var r = Math.floor(t / cols);
+      imgs.push("linear-gradient(#000,#000)");
+      poss.push(
+        (cols > 1 ? (c * 100 / (cols - 1)) : 0).toFixed(3) + "% " +
+        (rows > 1 ? (r * 100 / (rows - 1)) : 0).toFixed(3) + "%"
+      );
+    }
+    return {
+      image: imgs.join(","),
+      size: (100 / cols).toFixed(3) + "% " + (100 / rows).toFixed(3) + "%",
+      position: poss.join(",")
+    };
+  }
+
+  function applyFrost(frost, cols, rows, closed, ratio) {
+    if (!closed.length) { frost.hidden = true; return; }
+    frost.hidden = false;
+    var m = frostMask(cols, rows, closed);
+    frost.style.webkitMaskImage = m.image;
+    frost.style.maskImage = m.image;
+    frost.style.webkitMaskSize = m.size;
+    frost.style.maskSize = m.size;
+    frost.style.webkitMaskPosition = m.position;
+    frost.style.maskPosition = m.position;
+    // 進むほど残りのぼかしも少しずつ弱める
+    var px = Math.round(22 - 9 * ratio);
+    frost.style.webkitBackdropFilter = "blur(" + px + "px) saturate(0.88)";
+    frost.style.backdropFilter = "blur(" + px + "px) saturate(0.88)";
+  }
+
   function setsOf(im) { return Math.max(0, Math.min(settings.sets, im.sets || 0)); }
   function isFull(im) { return setsOf(im) >= settings.sets; }
 
@@ -486,12 +526,16 @@
     var open = {};
     for (var i = 0; i < revealed; i++) open[ord[i]] = true;
 
+    var cols = gridOf(total);
+    var rows = total / cols;
+
     if (stage.dataset.im !== m.id || stage.dataset.total !== String(total)) {
-      var cols = gridOf(total);
-      var t = '<div class="tiles" style="grid-template-columns:repeat(' + cols +
-        ',1fr);grid-template-rows:repeat(' + (total / cols) + ',1fr)">';
+      var t = '<div class="frost" id="frost"></div>' +
+        '<div class="tiles" style="grid-template-columns:repeat(' + cols +
+        ',1fr);grid-template-rows:repeat(' + rows + ',1fr)">';
       for (var c = 0; c < total; c++) t += '<div class="tile"></div>';
       stage.innerHTML = mediaHtml(m) + t + "</div>";
+      stage.classList.toggle("noblur", !CAN_BLUR);
       stage.dataset.im = m.id;
       stage.dataset.total = String(total);
       lastRevealed = -1;
@@ -501,15 +545,28 @@
 
     var tiles = stage.querySelector(".tiles");
     var stagger = lastRevealed >= 0 && revealed > lastRevealed;
+
+    // まず演出をすべて解除し、1回だけ再計算させてから付け直す
     for (var j = 0; j < total; j++) {
-      var el = tiles.children[j];
-      if (stagger && !el.classList.contains("open") && open[j]) {
-        el.style.transitionDelay = Math.min((posOf[j] - lastRevealed) * 90, 1600) + "ms";
-      } else {
-        el.style.transitionDelay = "0ms";
-      }
-      el.classList.toggle("open", !!open[j]);
+      tiles.children[j].classList.remove("flip");
+      tiles.children[j].style.animationDelay = "";
     }
+    void tiles.offsetWidth;
+
+    var closed = [];
+    for (var k = 0; k < total; k++) {
+      var el = tiles.children[k];
+      if (open[k]) {
+        if (stagger && posOf[k] >= lastRevealed) {
+          el.style.animationDelay = Math.min((posOf[k] - lastRevealed) * 120, 2200) + "ms";
+          el.classList.add("flip");
+        }
+      } else {
+        closed.push(k);
+      }
+    }
+
+    applyFrost(document.getElementById("frost"), cols, rows, closed, total ? revealed / total : 0);
     lastRevealed = revealed;
 
     var banner = stage.querySelector(".done-banner");
