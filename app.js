@@ -469,8 +469,26 @@
     x.fillRect(0, 0, w, h);
     if (media) {
       try {
-        if (canBlur) x.filter = "blur(34px) saturate(0.85)";
-        x.drawImage(media, 0, 0, w, h);
+        // いったん極端に小さく描いてから、2段階で引き伸ばす。
+        // canvas の filter が使えない端末（Safari の多くの版）でも確実にぼける。
+        var sw = Math.max(5, Math.round(w / 28));
+        var sh = Math.max(5, Math.round(h / 28));
+        var tiny = document.createElement("canvas");
+        tiny.width = sw; tiny.height = sh;
+        var tc = tiny.getContext("2d");
+        tc.imageSmoothingEnabled = true;
+        tc.drawImage(media, 0, 0, sw, sh);
+
+        var mid = document.createElement("canvas");
+        mid.width = Math.max(10, Math.round(w / 6));
+        mid.height = Math.max(10, Math.round(h / 6));
+        var mc = mid.getContext("2d");
+        mc.imageSmoothingEnabled = true;
+        mc.drawImage(tiny, 0, 0, sw, sh, 0, 0, mid.width, mid.height);
+
+        x.imageSmoothingEnabled = true;
+        if (canBlur) x.filter = "blur(10px) saturate(0.85)";
+        x.drawImage(mid, 0, 0, mid.width, mid.height, 0, 0, w, h);
         x.filter = "none";
       } catch (e) { /* 描けない素材は単色のまま */ }
     }
