@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>kintore-checker demo</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1d2026;
+    --panel-2: #262a32;
+    --line: #333944;
+    --text: #e8eaee;
+    --muted: #949cab;
+    --accent: #4ec9a5;
+    --accent-ink: #0d1512;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); }
+
+  body {
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px));
+    max-width: 560px;
+    margin: 0 auto;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  h1 { font-size: 1.1rem; margin: 0; font-weight: 700; }
+
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .badge {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 2px 10px;
+  }
+
+  .card { background: var(--panel); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+
+  .reveal-head { margin-bottom: 12px; }
+  .reveal-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.35rem;
+  }
+  .reveal-count small { font-weight: 400; font-size: 0.8rem; color: var(--muted); margin-left: 4px; }
+  .reveal-label { font-size: 0.8rem; color: var(--muted); }
+
+  .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
+  .stage svg.art { display: block; width: 100%; height: auto; }
+
+  .tiles { position: absolute; inset: 0; display: grid; pointer-events: none; }
+  .tile {
+    background: var(--panel-2);
+    border: 0.5px solid rgba(0,0,0,0.35);
+    transition: opacity 420ms ease;
+  }
+  .tile.open { opacity: 0; }
+
+  .done-banner {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 12px 14px;
+    background: rgba(20, 22, 26, 0.88);
+    font-size: 0.88rem;
+    text-align: center;
+  }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-title { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .dow { text-align: center; font-size: 0.7rem; color: var(--muted); padding-bottom: 4px; }
+  .dow.sun { color: #e0857d; }
+  .dow.sat { color: #7da8e0; }
+
+  .day {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 0.86rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+  .day.pad { visibility: hidden; }
+  .day.in { color: var(--text); }
+  .day.planned { background: var(--panel-2); }
+  .day.today { box-shadow: inset 0 0 0 1.5px var(--muted); }
+  .day.done { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .day.done.today { box-shadow: inset 0 0 0 1.5px var(--text); }
+  .day:disabled { opacity: 0.4; }
+  .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+  .day.done .dot { background: var(--accent-ink); }
+  .day.planned:not(.done) .dot { background: var(--accent); }
+
+  .hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.75;
+    margin: 0;
+  }
+  .hint b { color: var(--text); font-weight: 500; }
+
+  .row { display: flex; gap: 8px; margin-top: 14px; }
+  .row button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    font-size: 0.85rem;
+  }
+  .row button:active { filter: brightness(1.2); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>kintore-checker</h1>
+  <span class="badge">DEMO</span>
+</div>
+
+<section class="card">
+  <div class="reveal-head">
+    <div class="reveal-count" id="revealCount">0<small>/ 24</small></div>
+    <div class="reveal-label" id="revealLabel">—</div>
+  </div>
+  <div class="stage" id="stage">
+    <svg class="art" viewBox="0 0 600 750" xmlns="http://www.w3.org/2000/svg" aria-label="デモ用の仮画像">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2a1b4d"/>
+          <stop offset="45%" stop-color="#8e3d6b"/>
+          <stop offset="72%" stop-color="#e2705a"/>
+          <stop offset="100%" stop-color="#f6b263"/>
+        </linearGradient>
+        <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#e09a5c"/>
+          <stop offset="100%" stop-color="#2d1f42"/>
+        </linearGradient>
+      </defs>
+
+      <rect width="600" height="750" fill="url(#sky)"/>
+
+      <circle cx="300" cy="455" r="92" fill="#ffd98a"/>
+
+      <g fill="#ffffff" opacity="0.85">
+        <circle cx="92" cy="78" r="2.4"/>
+        <circle cx="188" cy="140" r="1.7"/>
+        <circle cx="286" cy="62" r="2"/>
+        <circle cx="402" cy="122" r="2.6"/>
+        <circle cx="498" cy="70" r="1.8"/>
+        <circle cx="540" cy="186" r="2.1"/>
+        <circle cx="60" cy="210" r="1.6"/>
+        <circle cx="352" cy="196" r="1.5"/>
+      </g>
+
+      <g fill="#2b1c3f">
+        <path d="M0 470 L128 322 L214 424 L286 350 L392 470 Z"/>
+        <path d="M300 470 L398 336 L470 410 L534 352 L600 470 Z"/>
+      </g>
+      <g fill="#442a5c">
+        <path d="M0 500 L96 404 L206 500 Z"/>
+        <path d="M398 500 L500 398 L600 500 Z"/>
+      </g>
+
+      <rect y="500" width="600" height="250" fill="url(#sea)"/>
+
+      <g fill="#ffd98a" opacity="0.5">
+        <rect x="262" y="520" width="76" height="7" rx="3.5"/>
+        <rect x="248" y="546" width="104" height="6" rx="3"/>
+        <rect x="270" y="572" width="60" height="5" rx="2.5"/>
+        <rect x="238" y="598" width="124" height="6" rx="3"/>
+        <rect x="278" y="626" width="44" height="4" rx="2"/>
+        <rect x="252" y="652" width="96" height="5" rx="2.5"/>
+      </g>
+
+      <g fill="#1a1028">
+        <path d="M0 690 L70 660 L150 700 L232 668 L318 704 L410 666 L502 702 L600 672 L600 750 L0 750 Z"/>
+      </g>
+    </svg>
+    <div class="tiles" id="tiles"></div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="cal-head">
+    <div class="cal-title" id="calTitle">—</div>
+  </div>
+  <div class="grid7" id="dowRow"></div>
+  <div class="grid7" id="calGrid"></div>
+  <div class="row">
+    <button id="fillAll">残りを一気に開く</button>
+    <button id="reset">最初に戻す</button>
+  </div>
+</section>
+
+<p class="hint">
+  緑のマスが達成日です。<b>日付をタップ</b>すると上の目隠しが1マス開き、もう一度タップすると戻ります。
+  本番では、この仮画像の代わりに自分で登録した画像が入ります。
+</p>
+
+<script>
+(function () {
+  "use strict";
+
+  var DOW = ["日", "月", "火", "水", "木", "金", "土"];
+  var PLANNED = [1, 3, 5];
+  var TOTAL = 24;
+  var COLS = 4;
+
+  var checks = {};
+  var now = new Date();
+  var tdy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var year = tdy.getFullYear();
+  var month = tdy.getMonth();
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function key(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+
+  function order(total) {
+    var seed = 20260921;
+    var arr = [];
+    for (var j = 0; j < total; j++) arr.push(j);
+    for (var k = total - 1; k > 0; k--) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      var m = seed % (k + 1);
+      var t = arr[k]; arr[k] = arr[m]; arr[m] = t;
+    }
+    return arr;
+  }
+
+  var ORDER = order(TOTAL);
+
+  function plannedDatesUpToToday() {
+    var out = [];
+    var last = new Date(year, month + 1, 0).getDate();
+    for (var d = 1; d <= last; d++) {
+      var date = new Date(year, month, d);
+      if (date > tdy) break;
+      if (PLANNED.indexOf(date.getDay()) >= 0) out.push(key(date));
+    }
+    return out;
+  }
+
+  function seed() {
+    checks = {};
+    var list = plannedDatesUpToToday();
+    var take = Math.min(7, list.length);
+    for (var i = 0; i < take; i++) checks[list[i]] = true;
+  }
+
+  function count() { return Object.keys(checks).length; }
+
+  function renderTiles() {
+    var n = Math.min(count(), TOTAL);
+    var open = {};
+    for (var i = 0; i < n; i++) open[ORDER[i]] = true;
+
+    var tiles = document.getElementById("tiles");
+    tiles.style.gridTemplateColumns = "repeat(" + COLS + ",1fr)";
+    tiles.style.gridTemplateRows = "repeat(" + (TOTAL / COLS) + ",1fr)";
+
+    if (tiles.children.length !== TOTAL) {
+      var html = "";
+      for (var t = 0; t < TOTAL; t++) html += '<div class="tile"></div>';
+      tiles.innerHTML = html;
+    }
+    for (var j = 0; j < TOTAL; j++) {
+      tiles.children[j].className = "tile" + (open[j] ? " open" : "");
+    }
+
+    var banner = document.getElementById("doneBanner");
+    if (n >= TOTAL) {
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "doneBanner";
+        banner.className = "done-banner";
+        banner.textContent = "完成しました";
+        document.getElementById("stage").appendChild(banner);
+      }
+    } else if (banner) {
+      banner.remove();
+    }
+
+    document.getElementById("revealCount").innerHTML = n + '<small>/ ' + TOTAL + "</small>";
+    document.getElementById("revealLabel").textContent =
+      n >= TOTAL ? "この画像は開ききりました" : "あと " + (TOTAL - n) + " 回で完成";
+  }
+
+  function renderDow() {
+    document.getElementById("dowRow").innerHTML = DOW.map(function (d, i) {
+      var cls = i === 0 ? " sun" : i === 6 ? " sat" : "";
+      return '<div class="dow' + cls + '">' + d + "</div>";
+    }).join("");
+  }
+
+  function renderCalendar() {
+    var first = new Date(year, month, 1);
+    var last = new Date(year, month + 1, 0);
+    var tdyKey = key(tdy);
+
+    document.getElementById("calTitle").textContent = year + "年 " + (month + 1) + "月";
+
+    var cells = [];
+    for (var p = 0; p < first.getDay(); p++) cells.push('<button class="day pad" disabled></button>');
+
+    for (var d = 1; d <= last.getDate(); d++) {
+      var date = new Date(year, month, d);
+      var k = key(date);
+      var planned = PLANNED.indexOf(date.getDay()) >= 0;
+      var done = !!checks[k];
+      var future = date > tdy;
+      var cls = "day in";
+      if (planned) cls += " planned";
+      if (done) cls += " done";
+      if (k === tdyKey) cls += " today";
+      cells.push(
+        '<button class="' + cls + '" data-k="' + k + '"' + (future ? " disabled" : "") + ">" +
+        d + (planned || done ? '<i class="dot"></i>' : "") + "</button>"
+      );
+    }
+    document.getElementById("calGrid").innerHTML = cells.join("");
+  }
+
+  document.getElementById("calGrid").addEventListener("click", function (e) {
+    var btn = e.target.closest(".day");
+    if (!btn || btn.disabled || !btn.dataset.k) return;
+    var k = btn.dataset.k;
+    if (checks[k]) delete checks[k]; else checks[k] = true;
+    renderCalendar();
+    renderTiles();
+  });
+
+  document.getElementById("fillAll").addEventListener("click", function () {
+    var last = new Date(year, month + 1, 0).getDate();
+    for (var d = 1; d <= last && count() < TOTAL; d++) {
+      var date = new Date(year, month, d);
+      if (date > tdy) break;
+      checks[key(date)] = true;
+    }
+    renderCalendar();
+    renderTiles();
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    seed();
+    renderCalendar();
+    renderTiles();
+  });
+
+  seed();
+  renderDow();
+  renderCalendar();
+  renderTiles();
+})();
+</script>
+</body>
+</html>
