@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<title>削る演出くらべ</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1d2026; --panel-2: #262a32; --line: #333944;
+    --text: #e8eaee; --muted: #949cab; --accent: #4ec9a5; --accent-ink: #0d1512;
+    --pink: #ff5ca6;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); }
+  body {
+    color: var(--text); font-size: 16px; line-height: 1.6;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(40px + env(safe-area-inset-bottom, 0px));
+    max-width: 560px; margin: 0 auto; -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.1rem; margin: 0 0 6px; }
+  .lede { color: var(--muted); font-size: 0.82rem; margin: 0 0 18px; }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+  .card { background: var(--panel); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  .name { font-weight: 700; font-size: 0.97rem; }
+  .tag { font-size: 0.68rem; color: var(--muted); font-family: ui-monospace, monospace; }
+  .desc { font-size: 0.78rem; color: var(--muted); margin: 0 0 11px; line-height: 1.7; }
+
+  .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); aspect-ratio: 5 / 3; }
+  .stage img.art { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .row { display: flex; gap: 8px; margin-top: 11px; }
+  .row button { flex: 1; padding: 11px; border-radius: 10px; background: var(--panel-2); font-size: 0.85rem; }
+  .row button.go { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .row button:active { filter: brightness(1.18); }
+
+  .top { display: flex; gap: 8px; margin-bottom: 18px; }
+  .top button { flex: 1; padding: 12px; border-radius: 11px; background: var(--panel-2); font-size: 0.85rem; }
+  .top button.go { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+  .speed { display: flex; gap: 6px; margin-bottom: 18px; }
+  .speed button { flex: 1; padding: 9px 0; border-radius: 9px; background: var(--panel-2); font-size: 0.8rem; }
+  .speed button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .speed-lab { font-size: 0.74rem; color: var(--muted); margin-bottom: 7px; }
+  .note { font-size: 0.74rem; color: var(--muted); line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<h1>削る演出くらべ</h1>
+<p class="lede">
+  削り跡を残さず、ピンクを効かせた4案です。カードをタップすると再生します。
+  どれも最後は覆いが完全に消えます。
+</p>
+
+<div class="top">
+  <button class="go" id="playAll">全部まとめて再生</button>
+  <button id="resetAll">覆いを戻す</button>
+</div>
+
+<p class="speed-lab">再生の速さ</p>
+<div class="speed" id="speed">
+  <button data-ms="2400">ゆっくり</button>
+  <button data-ms="1500" class="on">標準</button>
+  <button data-ms="900">速い</button>
+</div>
+
+<div id="cards"></div>
+
+<p class="note">
+  削りの筆跡は、隣の列と重なる太さにしてあるので塗り残しが出ません。
+  終わり際に残りを一気に飛ばすので、最後は必ずまっさらになります。
+</p>
+
+<script>
+(function () {
+  "use strict";
+
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var duration = 1500;
+  var PINK = "255,92,166";
+
+  /* ---------- 見本の絵 ---------- */
+
+  function makeArt() {
+    var c = document.createElement("canvas");
+    c.width = 900; c.height = 540;
+    var x = c.getContext("2d");
+    var g = x.createLinearGradient(0, 0, 900, 540);
+    g.addColorStop(0, "#1d4ed8"); g.addColorStop(0.5, "#c026a3"); g.addColorStop(1, "#f59e0b");
+    x.fillStyle = g; x.fillRect(0, 0, 900, 540);
+    x.strokeStyle = "rgba(255,255,255,0.8)"; x.lineWidth = 3;
+    for (var y = 18; y < 540; y += 26) { x.beginPath(); x.moveTo(0, y); x.lineTo(900, y); x.stroke(); }
+    x.fillStyle = "#ffe27a";
+    for (var i = 0; i < 46; i++) { x.beginPath(); x.arc(45 + (i * 137) % 820, 45 + (i * 211) % 460, 15, 0, 7); x.fill(); }
+    x.fillStyle = "rgba(0,0,0,0.55)";
+    x.font = "bold 76px -apple-system, sans-serif";
+    x.textAlign = "center"; x.fillText("SAMPLE", 450, 300);
+    return c;
+  }
+  var artCanvas = makeArt();
+  var artURL = artCanvas.toDataURL("image/png");
+
+  function bakeCover(w, h) {
+    var c = document.createElement("canvas");
+    c.width = Math.round(w * DPR); c.height = Math.round(h * DPR);
+    var x = c.getContext("2d");
+    x.scale(DPR, DPR);
+    try { x.filter = "blur(26px)"; } catch (e) {}
+    x.drawImage(artCanvas, 0, 0, w, h);
+    x.filter = "none";
+    x.fillStyle = "rgba(16,18,22,0.26)";
+    x.fillRect(0, 0, w, h);
+    return c;
+  }
+
+  /* ---------- 削りの道すじ ---------- */
+
+  // 蛇行。行の間隔より筆を太くして塗り残しを作らない
+  function serpentine(w, h, t) {
+    var rows = 4;
+    var p = t * rows;
+    var r = Math.min(rows - 0.0001, p);
+    var i = Math.floor(r), f = r - i;
+    var y = h * (i + 0.5) / rows;
+    var dir = i % 2 ? -1 : 1;
+    var x0 = dir > 0 ? -w * 0.12 : w * 1.12;
+    var x1 = dir > 0 ? w * 1.12 : -w * 0.12;
+    return { x: x0 + (x1 - x0) * f, y: y + Math.sin(f * 7 + i) * h * 0.04 };
+  }
+
+  // 中心から外へ渦を描く
+  function spiral(w, h, t) {
+    var turns = 3.2;
+    var a = t * turns * Math.PI * 2;
+    var rad = t * Math.max(w, h) * 0.62;
+    return { x: w / 2 + Math.cos(a) * rad, y: h / 2 + Math.sin(a) * rad * 0.72 };
+  }
+
+  // 斜めにひと払い
+  function wipe(w, h, t) {
+    return { x: -w * 0.25 + t * w * 1.5, y: h * 1.15 - t * h * 1.3 };
+  }
+
+  /* ---------- 4案 ---------- */
+
+  var DEMOS = [
+    {
+      id: "trail",
+      name: "ピンクの光跡でなぞる",
+      tag: "蛇行 + 発光する筆先",
+      desc: "筆先がピンクに光りながら覆いを削っていきます。通った跡に光が尾を引き、すぐ消えます。動きが分かりやすく、達成した感じが強く出ます。",
+      path: serpentine, brush: 0.30,
+      fx: function (ctx, st, p, t, w, h) {
+        fadeTrail(ctx, w, h, 0.14);
+        glow(ctx, p.x, p.y, h * 0.22, 0.85);
+        glow(ctx, p.x, p.y, h * 0.08, 1);
+      }
+    },
+    {
+      id: "dust",
+      name: "ピンクの粉が舞う",
+      tag: "蛇行 + 粒子",
+      desc: "削ったところからピンクの粉が舞い上がって消えます。削りカス自体は残らず、粉だけが散ります。いちばん「剥がした」実感が出ます。",
+      path: serpentine, brush: 0.30,
+      fx: function (ctx, st, p, t, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        if (!st._parts) st._parts = [];
+        if (t < 0.99) {
+          for (var k = 0; k < 3; k++) {
+            st._parts.push({
+              x: p.x + (Math.random() - 0.5) * h * 0.22,
+              y: p.y + (Math.random() - 0.5) * h * 0.22,
+              vx: (Math.random() - 0.5) * 1.6,
+              vy: -0.5 - Math.random() * 1.4,
+              r: 1.2 + Math.random() * 3.2,
+              life: 1
+            });
+          }
+        }
+        var keep = [];
+        for (var i = 0; i < st._parts.length; i++) {
+          var q = st._parts[i];
+          q.x += q.vx; q.y += q.vy; q.vy += 0.035; q.life -= 0.022;
+          if (q.life <= 0) continue;
+          ctx.fillStyle = "rgba(" + PINK + "," + (q.life * 0.9).toFixed(3) + ")";
+          ctx.beginPath(); ctx.arc(q.x, q.y, q.r * q.life, 0, 7); ctx.fill();
+          keep.push(q);
+        }
+        st._parts = keep;
+      },
+      onReset: function (st) { st._parts = []; }
+    },
+    {
+      id: "spiral",
+      name: "渦を描いて削る",
+      tag: "渦巻き + 発光する筆先",
+      desc: "中心から外へ渦を描きながら広がります。中央がまず見えるので、何の絵かが早く分かります。",
+      path: spiral, brush: 0.34,
+      fx: function (ctx, st, p, t, w, h) {
+        fadeTrail(ctx, w, h, 0.10);
+        glow(ctx, p.x, p.y, h * 0.20, 0.8);
+        glow(ctx, p.x, p.y, h * 0.07, 1);
+      }
+    },
+    {
+      id: "wipe",
+      name: "ひと払いで消す",
+      tag: "斜めの光の帯",
+      desc: "ピンクの光の帯が斜めに走り、通ったところが一気に現れます。いちばん短く、繰り返し見ても飽きにくい形です。",
+      path: wipe, brush: 1.5,
+      fx: function (ctx, st, p, t, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        var len = Math.max(w, h) * 1.6;
+        var ang = Math.atan2(-h * 1.3, w * 1.5);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(ang + Math.PI / 2);
+        var g = ctx.createLinearGradient(0, -h * 0.14, 0, h * 0.14);
+        g.addColorStop(0, "rgba(" + PINK + ",0)");
+        g.addColorStop(0.42, "rgba(" + PINK + ",0.85)");
+        g.addColorStop(0.5, "rgba(255,220,238,0.95)");
+        g.addColorStop(0.58, "rgba(" + PINK + ",0.85)");
+        g.addColorStop(1, "rgba(" + PINK + ",0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(-len / 2, -h * 0.14, len, h * 0.28);
+        ctx.restore();
+        if (t > 0.86) ctx.globalAlpha = Math.max(0, 1 - (t - 0.86) / 0.14);
+      }
+    }
+  ];
+
+  function glow(ctx, x, y, r, a) {
+    var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(255,225,240," + a + ")");
+    g.addColorStop(0.35, "rgba(" + PINK + "," + (a * 0.8).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + PINK + ",0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  }
+
+  // 尾を引かせる。毎フレーム少しずつ透明にしていく
+  function fadeTrail(ctx, w, h, amount) {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0," + amount + ")";
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  /* ---------- 画面の組み立て ---------- */
+
+  var cards = document.getElementById("cards");
+  var all = [];
+
+  DEMOS.forEach(function (d) {
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML =
+      '<div class="head"><span class="name">' + d.name + '</span><span class="tag">' + d.tag + "</span></div>" +
+      '<p class="desc">' + d.desc + "</p>" +
+      '<div class="stage"><img class="art" alt=""><canvas class="cover"></canvas><canvas class="fx"></canvas></div>' +
+      '<div class="row"><button class="go">再生</button><button class="rs">戻す</button></div>';
+    cards.appendChild(card);
+
+    var st = card.querySelector(".stage");
+    st.querySelector("img.art").src = artURL;
+    st._cover = st.querySelector("canvas.cover");
+    st._fx = st.querySelector("canvas.fx");
+    all.push({ d: d, st: st });
+
+    card.querySelector(".go").addEventListener("click", function () { play(d, st); });
+    card.querySelector(".rs").addEventListener("click", function () { reset(d, st); });
+    st.addEventListener("click", function () { play(d, st); });
+  });
+
+  function sizeUp(st) {
+    var w = st.clientWidth, h = st.clientHeight;
+    [st._cover, st._fx].forEach(function (cv) {
+      if (cv.width !== Math.round(w * DPR)) {
+        cv.width = Math.round(w * DPR);
+        cv.height = Math.round(h * DPR);
+      }
+    });
+    return { w: w, h: h };
+  }
+
+  function reset(d, st) {
+    if (st._raf) { cancelAnimationFrame(st._raf); st._raf = 0; }
+    var s = sizeUp(st);
+    if (!s.w || !s.h) return;
+    var cx = st._cover.getContext("2d");
+    cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx.globalCompositeOperation = "source-over";
+    cx.clearRect(0, 0, s.w, s.h);
+    var cover = bakeCover(s.w, s.h);
+    cx.drawImage(cover, 0, 0, cover.width, cover.height, 0, 0, s.w, s.h);
+    var fx = st._fx.getContext("2d");
+    fx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    fx.globalCompositeOperation = "source-over";
+    fx.globalAlpha = 1;
+    fx.clearRect(0, 0, s.w, s.h);
+    st._last = null;
+    if (d.onReset) d.onReset(st);
+  }
+
+  function play(d, st) {
+    reset(d, st);
+    var s = sizeUp(st);
+    if (!s.w || !s.h) return;
+    var cx = st._cover.getContext("2d");
+    var fx = st._fx.getContext("2d");
+    var t0 = performance.now();
+
+    function frame(now) {
+      var t = Math.min(1, (now - t0) / duration);
+      var p = d.path(s.w, s.h, t);
+
+      // 削る
+      cx.globalCompositeOperation = "destination-out";
+      cx.lineCap = cx.lineJoin = "round";
+      cx.lineWidth = s.h * d.brush;
+      cx.beginPath();
+      if (st._last) { cx.moveTo(st._last.x, st._last.y); cx.lineTo(p.x, p.y); }
+      else { cx.moveTo(p.x, p.y); cx.lineTo(p.x + 0.01, p.y); }
+      cx.stroke();
+
+      // 終わり際に残りを飛ばして、削り残しを作らない
+      if (t > 0.88) {
+        cx.fillStyle = "rgba(0,0,0," + ((t - 0.88) / 0.12 * 0.5).toFixed(3) + ")";
+        cx.fillRect(0, 0, s.w, s.h);
+      }
+      if (t >= 1) { cx.clearRect(0, 0, s.w, s.h); }
+      cx.globalCompositeOperation = "source-over";
+      st._last = p;
+
+      // ピンク
+      fx.globalAlpha = 1;
+      fx.globalCompositeOperation = "source-over";
+      d.fx(fx, st, p, t, s.w, s.h);
+      if (t >= 1) {
+        fx.globalCompositeOperation = "source-over";
+        fx.globalAlpha = 1;
+        fx.clearRect(0, 0, s.w, s.h);
+      }
+
+      if (t < 1) st._raf = requestAnimationFrame(frame);
+      else {
+        // 粒子だけ少し残して消えるまで回す
+        if (d.id === "dust" && st._parts && st._parts.length) {
+          st._raf = requestAnimationFrame(function tail() {
+            fx.clearRect(0, 0, s.w, s.h);
+            d.fx(fx, st, p, 1, s.w, s.h);
+            st._raf = st._parts.length ? requestAnimationFrame(tail) : 0;
+          });
+        } else st._raf = 0;
+      }
+    }
+    st._raf = requestAnimationFrame(frame);
+  }
+
+  document.getElementById("playAll").addEventListener("click", function () {
+    all.forEach(function (a) { play(a.d, a.st); });
+  });
+  document.getElementById("resetAll").addEventListener("click", function () {
+    all.forEach(function (a) { reset(a.d, a.st); });
+  });
+  document.getElementById("speed").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-ms]");
+    if (!b) return;
+    duration = Number(b.dataset.ms);
+    [].forEach.call(this.children, function (c) { c.classList.toggle("on", c === b); });
+  });
+
+  function boot() { all.forEach(function (a) { reset(a.d, a.st); }); }
+  if (document.readyState === "complete") boot();
+  else window.addEventListener("load", boot);
+  window.addEventListener("resize", boot);
+})();
+</script>
+</body>
+</html>
