@@ -496,10 +496,18 @@
     return arr;
   }
 
-  function gridOf(total) {
-    if (total === 36) return 6;
-    if (total === 72) return 8;
-    return 12;
+  // 区画がなるべく正方形に近くなる割り方を選ぶ。
+  // 縦長の素材で 6x6 に固定すると、マスが短冊のように縦長になってしまう。
+  function gridOf(total, w, h) {
+    if (!w || !h) return total === 36 ? 6 : total === 72 ? 8 : 12;
+    var best = 1, score = Infinity;
+    for (var c = 1; c <= total; c++) {
+      if (total % c) continue;
+      var r = total / c;
+      var d = Math.abs(Math.log((w / c) / (h / r)));
+      if (d < score) { score = d; best = c; }
+    }
+    return best;
   }
 
   // 区画の矩形。隣と1pxだけ重ねて、境目に覆いの筋が残らないようにする
@@ -518,9 +526,12 @@
       stage.appendChild(cv);
     }
     var w = stage.clientWidth, h = stage.clientHeight;
-    if (cv.width !== Math.round(w * DPR)) {
-      cv.width = Math.round(w * DPR);
-      cv.height = Math.round(h * DPR);
+    var bw = Math.round(w * DPR), bh = Math.round(h * DPR);
+    // 幅だけを見ていると、動画のように後から高さが決まる素材で作り直されず、
+    // 古い高さの絵が縦に引き伸ばされる
+    if (cv.width !== bw || cv.height !== bh) {
+      cv.width = bw;
+      cv.height = bh;
     }
     return cv;
   }
@@ -546,7 +557,7 @@
     if (!cov) return;
 
     var total = settings.sets * TILES_PER_SET;
-    var cols = gridOf(total), rows = total / cols;
+    var cols = gridOf(total, w, h), rows = total / cols;
     var ord = order(mediaId, total);
 
     var cv = stageCanvas(stage, "cover");
@@ -592,7 +603,7 @@
     if (reduce || !w || !h) { paintCover(stage, mediaId, to, null); clearFx(stage); return; }
 
     var total = settings.sets * TILES_PER_SET;
-    var cols = gridOf(total), rows = total / cols;
+    var cols = gridOf(total, w, h), rows = total / cols;
     var ord = order(mediaId, total);
     var count = to - from;
     var span = count * TILE_MS;
@@ -668,6 +679,26 @@
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
   }
 
+  // 素材の実寸が決まったとき・ステージの大きさが変わったときに覆いを作り直す
+  function repaintCover() {
+    var stage = document.getElementById("stage");
+    if (!stage || !stage.dataset.im) return;
+    baked = null; bakedKey = "";
+    paintCover(stage, stage.dataset.im, progress().tiles, null);
+  }
+
+  function watchStage(stage) {
+    if (!window.ResizeObserver || stage.dataset.watched) return;
+    stage.dataset.watched = "1";
+    var last = "";
+    new ResizeObserver(function () {
+      var k = stage.clientWidth + "x" + stage.clientHeight;
+      if (k === last) return;
+      last = k;
+      repaintCover();
+    }).observe(stage);
+  }
+
   function refreshCover() {
     var stage = document.getElementById("stage");
     if (!stage || !stage.dataset.im) return;
@@ -719,14 +750,15 @@
       baked = null; bakedKey = "";
       lastTiles = -1;
       var v = stage.querySelector("video");
-      if (v) v.play().catch(function () {});
-      var im0 = stage.querySelector("img.art");
-      if (im0 && !im0.complete) {
-        im0.addEventListener("load", function () {
-          baked = null; bakedKey = "";
-          paintCover(stage, m.id, progress().tiles, null);
-        });
+      if (v) {
+        v.play().catch(function () {});
+        // 動画は読み込み前の高さが 150px。実寸が分かった時点で覆いを作り直す
+        v.addEventListener("loadedmetadata", repaintCover);
+        v.addEventListener("loadeddata", repaintCover);
       }
+      var im0 = stage.querySelector("img.art");
+      if (im0 && !im0.complete) im0.addEventListener("load", repaintCover);
+      watchStage(stage);
     }
 
     // 進んだときだけ、区画を削る演出を走らせる
