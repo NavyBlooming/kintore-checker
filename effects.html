@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<title>解放演出くらべ</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1d2026; --panel-2: #262a32; --line: #333944;
+    --text: #e8eaee; --muted: #949cab; --accent: #4ec9a5; --accent-ink: #0d1512;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); }
+  body {
+    color: var(--text); font-size: 16px; line-height: 1.6;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(40px + env(safe-area-inset-bottom, 0px));
+    max-width: 560px; margin: 0 auto; -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.1rem; margin: 0 0 6px; }
+  .lede { color: var(--muted); font-size: 0.82rem; margin: 0 0 18px; }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+  .card { background: var(--panel); border-radius: 16px; padding: 14px; margin-bottom: 16px; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  .name { font-weight: 700; font-size: 0.97rem; }
+  .tag { font-size: 0.68rem; color: var(--muted); font-family: ui-monospace, monospace; }
+  .desc { font-size: 0.78rem; color: var(--muted); margin: 0 0 11px; line-height: 1.7; }
+
+  .stage {
+    position: relative; border-radius: 12px; overflow: hidden;
+    background: var(--panel-2); aspect-ratio: 5 / 3;
+  }
+  .stage img.art { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .stage .fx { position: absolute; inset: 0; pointer-events: none; }
+  .stage canvas.fx { width: 100%; height: 100%; }
+
+  .row { display: flex; gap: 8px; margin-top: 11px; }
+  .row button {
+    flex: 1; padding: 11px; border-radius: 10px; background: var(--panel-2); font-size: 0.85rem;
+  }
+  .row button.go { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .row button:active { filter: brightness(1.18); }
+
+  .top { display: flex; gap: 8px; margin-bottom: 18px; }
+  .top button { flex: 1; padding: 12px; border-radius: 11px; background: var(--panel-2); font-size: 0.85rem; }
+  .top button.go { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+  .speed { display: flex; gap: 6px; margin-bottom: 18px; }
+  .speed button { flex: 1; padding: 9px 0; border-radius: 9px; background: var(--panel-2); font-size: 0.8rem; }
+  .speed button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .speed-lab { font-size: 0.74rem; color: var(--muted); margin-bottom: 7px; }
+
+  .src { font-size: 0.72rem; color: var(--muted); line-height: 1.8; margin-top: 4px; }
+  .src a { color: #6fb4ee; }
+</style>
+</head>
+<body>
+
+<h1>解放演出くらべ</h1>
+<p class="lede">
+  隠した1区画が開くときの見せ方を5通り並べました。カードをタップすると再生します。
+  実際の画面では、これが6区画ぶん順番に走ります。
+</p>
+
+<div class="top">
+  <button class="go" id="playAll">全部まとめて再生</button>
+  <button id="resetAll">覆いを戻す</button>
+</div>
+
+<p class="speed-lab">再生の速さ</p>
+<div class="speed" id="speed">
+  <button data-ms="2400">ゆっくり</button>
+  <button data-ms="1400" class="on">標準</button>
+  <button data-ms="800">速い</button>
+</div>
+
+<div id="cards"></div>
+
+<p class="src">
+  参考にした実例:
+  <a href="https://andrewplummer.github.io/peel-js/">Peel.js</a> ／
+  <a href="https://codepen.io/lcdsantos/pen/yaYYqB">CSSのみのシールめくれ</a> ／
+  <a href="https://codepen.io/loremipson/pen/BaKpgB">単一要素のシールめくれ</a> ／
+  <a href="https://andrewhungblog.wordpress.com/2018/04/29/page-curl-shader-breakdown/">ページカールのシェーダ解説</a> ／
+  <a href="https://webdesign.tutsplus.com/how-to-create-a-scratch-card-effect-in-vanilla-javascript--cms-108922t">スクラッチカードの作り方</a>
+</p>
+
+<script>
+(function () {
+  "use strict";
+
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var duration = 1400;
+
+  /* ---------- 見本の絵（細部があるほど違いが分かる） ---------- */
+
+  function makeArt() {
+    var c = document.createElement("canvas");
+    c.width = 900; c.height = 540;
+    var x = c.getContext("2d");
+    var g = x.createLinearGradient(0, 0, 900, 540);
+    g.addColorStop(0, "#1d4ed8"); g.addColorStop(0.5, "#c026a3"); g.addColorStop(1, "#f59e0b");
+    x.fillStyle = g; x.fillRect(0, 0, 900, 540);
+    x.strokeStyle = "rgba(255,255,255,0.8)"; x.lineWidth = 3;
+    for (var y = 18; y < 540; y += 26) { x.beginPath(); x.moveTo(0, y); x.lineTo(900, y); x.stroke(); }
+    x.fillStyle = "#ffe27a";
+    for (var i = 0; i < 46; i++) {
+      x.beginPath(); x.arc(45 + (i * 137) % 820, 45 + (i * 211) % 460, 15, 0, 7); x.fill();
+    }
+    x.fillStyle = "rgba(0,0,0,0.55)";
+    x.font = "bold 76px -apple-system, sans-serif";
+    x.textAlign = "center"; x.fillText("SAMPLE", 450, 300);
+    return c;
+  }
+
+  var artCanvas = makeArt();
+  var artURL = artCanvas.toDataURL("image/png");
+
+  // 覆いの見た目（ぼかした絵）。シールの表面や削りカスの色に使う
+  function bakeCover(w, h) {
+    var c = document.createElement("canvas");
+    c.width = Math.round(w * DPR); c.height = Math.round(h * DPR);
+    var x = c.getContext("2d");
+    x.scale(DPR, DPR);
+    try { x.filter = "blur(26px)"; } catch (e) {}
+    x.drawImage(artCanvas, 0, 0, w, h);
+    x.filter = "none";
+    x.fillStyle = "rgba(16,18,22,0.26)";
+    x.fillRect(0, 0, w, h);
+    return c;
+  }
+
+  /* ---------- 多角形を半平面で切る（コーナーフォールド用） ---------- */
+
+  function clipHalf(poly, keep) {
+    var out = [];
+    for (var i = 0; i < poly.length; i++) {
+      var a = poly[i], b = poly[(i + 1) % poly.length];
+      var ka = keep(a), kb = keep(b);
+      if (ka) out.push(a);
+      if (ka !== kb) {
+        var fa = a[0] + a[1], fb = b[0] + b[1];
+        var t = (keep.d - fa) / (fb - fa);
+        out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      }
+    }
+    return out;
+  }
+
+  function polyToClip(poly, w, h) {
+    if (!poly.length) return "polygon(0 0, 0 0, 0 0)";
+    return "polygon(" + poly.map(function (p) {
+      return (p[0] / w * 100).toFixed(3) + "% " + (p[1] / h * 100).toFixed(3) + "%";
+    }).join(",") + ")";
+  }
+
+  /* ---------- 演出 ---------- */
+
+  var EFFECTS = [];
+
+  /* 1. いま動いているCSS版 */
+  EFFECTS.push({
+    id: "rot3d",
+    name: "角を支点に3D回転",
+    tag: "CSS transform",
+    desc: "いま公開しているもの。角を支点に板ごと倒します。実装は一番軽いですが、紙というより厚紙が起き上がって倒れる動きです。",
+    init: function (st) {
+      var d = document.createElement("div");
+      d.className = "fx";
+      d.style.background = "rgba(16,18,22,0.26)";
+      d.style.backdropFilter = d.style.webkitBackdropFilter = "blur(26px) saturate(0.85)";
+      d.style.transformOrigin = "100% 100%";
+      d.style.backfaceVisibility = d.style.webkitBackfaceVisibility = "hidden";
+      st.appendChild(d);
+      st._el = d;
+    },
+    draw: function (st, t) {
+      var d = st._el;
+      var deg = t * 98;
+      d.style.transform = "rotate3d(1,-1,0," + deg + "deg)";
+      d.style.opacity = t > 0.78 ? String(1 - (t - 0.78) / 0.22) : "1";
+      var sh = 22 * t;
+      d.style.boxShadow = sh + "px " + sh + "px " + (14 + sh) + "px rgba(0,0,0," + (0.5 * (1 - t)) + ")";
+    },
+    reset: function (st) { st._el.style.cssText = st._el.style.cssText; this.draw(st, 0); }
+  });
+
+  /* 2. コーナーフォールド（CodePen 系の定番手法） */
+  EFFECTS.push({
+    id: "fold",
+    name: "角から折り返す",
+    tag: "clip-path + gradient",
+    desc: "折り目の線が対角線に沿って進み、めくれた部分が裏返って見えます。裏面はグラデーションで厚みを出しています。紙をめくった形に一番近いのはこれです。",
+    init: function (st) {
+      var front = document.createElement("div");
+      front.className = "fx";
+      front.style.background = "rgba(16,18,22,0.26)";
+      front.style.backdropFilter = front.style.webkitBackdropFilter = "blur(26px) saturate(0.85)";
+      var back = document.createElement("div");
+      back.className = "fx";
+      back.style.filter = "drop-shadow(-4px -4px 10px rgba(0,0,0,0.55))";
+      st.appendChild(front); st.appendChild(back);
+      st._front = front; st._back = back;
+    },
+    draw: function (st, t) {
+      var w = st.clientWidth, h = st.clientHeight;
+      var d = t * (w + h);
+      var rect = [[0, 0], [w, 0], [w, h], [0, h]];
+
+      var keepFront = function (p) { return p[0] + p[1] >= d; };
+      keepFront.d = d;
+      var keepPeel = function (p) { return p[0] + p[1] <= d; };
+      keepPeel.d = d;
+
+      st._front.style.clipPath = st._front.style.webkitClipPath = polyToClip(clipHalf(rect, keepFront), w, h);
+
+      // めくれた部分を折り目で反転させると裏面の形になる
+      var peel = clipHalf(rect, keepPeel);
+      var mirrored = peel.map(function (p) { return [d - p[1], d - p[0]]; });
+      st._back.style.clipPath = st._back.style.webkitClipPath = polyToClip(mirrored, w, h);
+
+      // 折り目側が暗く、先端が明るい。紙の丸みに見せる
+      var ang = 135;
+      st._back.style.background =
+        "linear-gradient(" + ang + "deg," +
+        "rgba(122,96,110,0.98) 0%," +
+        "rgba(214,188,202,0.98) 22%," +
+        "rgba(252,238,246,0.98) 48%," +
+        "rgba(198,170,186,0.98) 76%," +
+        "rgba(140,112,128,0.98) 100%)";
+      st._back.style.opacity = t > 0.9 ? String(1 - (t - 0.9) / 0.1) : "1";
+      st._front.style.opacity = "1";
+    },
+    reset: function (st) { this.draw(st, 0); }
+  });
+
+  /* 3. Canvas の円筒カール */
+  EFFECTS.push({
+    id: "curl",
+    name: "円筒に巻き上がる",
+    tag: "Canvas 2D",
+    desc: "上辺から紙が巻き上がります。短冊に割って位置をずらし、その上に丸みの陰影と裏面を描いています。処理は重めですが、巻きの太さを表現できます。",
+    init: function (st) {
+      var cv = document.createElement("canvas");
+      cv.className = "fx";
+      st.appendChild(cv);
+      st._cv = cv;
+    },
+    draw: function (st, t) {
+      var w = st.clientWidth, h = st.clientHeight;
+      var cv = st._cv;
+      if (cv.width !== Math.round(w * DPR)) {
+        cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
+        st._cover = bakeCover(w, h);
+      }
+      if (!st._cover) st._cover = bakeCover(w, h);
+      var x = cv.getContext("2d");
+      x.setTransform(DPR, 0, 0, DPR, 0, 0);
+      x.clearRect(0, 0, w, h);
+
+      var r = h * 0.26;                 // 巻きの半径
+      var s = t * (h + Math.PI * r);    // 接地線の位置
+      var N = 80, step = h / N;
+
+      // 接地線の手前に落ちる影
+      if (s > 0 && s < h) {
+        var g = x.createLinearGradient(0, s, 0, s + r * 1.4);
+        g.addColorStop(0, "rgba(0,0,0,0.5)"); g.addColorStop(1, "rgba(0,0,0,0)");
+        x.fillStyle = g; x.fillRect(0, s, w, r * 1.4);
+      }
+
+      for (var i = N - 1; i >= 0; i--) {
+        var u0 = i * step, u1 = u0 + step;
+        var a0 = s - u0;
+        if (a0 <= 0) { // まだ寝ている
+          x.drawImage(st._cover, 0, u0 * DPR, w * DPR, step * DPR, 0, u0, w, step + 0.5);
+          continue;
+        }
+        var p0 = proj(a0, r, s), p1 = proj(s - u1, r, s);
+        var lo = Math.min(p0, p1), hi = Math.max(p0, p1);
+        if (hi < -h * 0.5) continue;
+        var dh = Math.max(0.7, hi - lo);
+        var ph = Math.min(a0 / r, Math.PI);
+        if (a0 > Math.PI * r) {
+          // 巻きを越えた裏面
+          x.fillStyle = "rgba(250,236,244,0.97)";
+          x.fillRect(0, lo, w, dh);
+          x.fillStyle = "rgba(0,0,0," + (0.30 * Math.min(1, (a0 - Math.PI * r) / (r * 1.5))).toFixed(3) + ")";
+          x.fillRect(0, lo, w, dh);
+        } else {
+          x.drawImage(st._cover, 0, u0 * DPR, w * DPR, step * DPR, 0, lo, w, dh);
+          var lit = 0.5 + 0.5 * Math.cos(ph);      // 稜線で明るく、根元で暗く
+          if (lit < 0.55) {
+            x.fillStyle = "rgba(0,0,0," + ((0.55 - lit) * 1.1).toFixed(3) + ")";
+          } else {
+            x.fillStyle = "rgba(255,240,248," + ((lit - 0.55) * 0.5).toFixed(3) + ")";
+          }
+          x.fillRect(0, lo, w, dh);
+        }
+      }
+    },
+    reset: function (st) { this.draw(st, 0); }
+  });
+
+  function proj(a, r, s) {
+    if (a <= 0) return s - a;
+    if (a <= Math.PI * r) return s - r * Math.sin(a / r);
+    return s - (a - Math.PI * r);
+  }
+
+  /* 4. スクラッチ */
+  EFFECTS.push({
+    id: "scratch",
+    name: "こすって削る",
+    tag: "Canvas destination-out",
+    desc: "銀色のスクラッチカードのように、覆いが削れて消えます。削り跡が残るので「自分で開けた」感じが強く出ます。",
+    init: function (st) {
+      var cv = document.createElement("canvas");
+      cv.className = "fx";
+      st.appendChild(cv);
+      st._cv = cv;
+    },
+    draw: function (st, t) {
+      var w = st.clientWidth, h = st.clientHeight;
+      var cv = st._cv;
+      if (cv.width !== Math.round(w * DPR)) {
+        cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
+        st._cover = bakeCover(w, h);
+      }
+      if (!st._cover) st._cover = bakeCover(w, h);
+      var x = cv.getContext("2d");
+      x.setTransform(DPR, 0, 0, DPR, 0, 0);
+      x.globalCompositeOperation = "source-over";
+      x.clearRect(0, 0, w, h);
+      x.drawImage(st._cover, 0, 0, cv.width, cv.height, 0, 0, w, h);
+
+      // 蛇行しながら削る
+      x.globalCompositeOperation = "destination-out";
+      x.lineCap = x.lineJoin = "round";
+      x.lineWidth = h / 4.2;
+      var rows = 5;
+      var total = t * rows;
+      for (var r = 0; r < rows; r++) {
+        var local = Math.max(0, Math.min(1, total - r));
+        if (local <= 0) break;
+        var y = h * (r + 0.5) / rows;
+        var dir = r % 2 ? -1 : 1;
+        var x0 = dir > 0 ? -h / 8 : w + h / 8;
+        var x1 = x0 + dir * (w + h / 4) * local;
+        x.beginPath();
+        x.moveTo(x0, y);
+        var seg = 8;
+        for (var k = 1; k <= seg; k++) {
+          var p = k / seg;
+          x.lineTo(x0 + (x1 - x0) * p, y + Math.sin(p * 7 + r) * h * 0.035);
+        }
+        x.stroke();
+      }
+      x.globalCompositeOperation = "source-over";
+    },
+    reset: function (st) { this.draw(st, 0); }
+  });
+
+  /* 5. ノイズで溶ける */
+  EFFECTS.push({
+    id: "dissolve",
+    name: "ノイズで溶ける",
+    tag: "Canvas ピクセル処理",
+    desc: "覆いがまだらに薄れて消えます。動きが静かで、素材の内容を邪魔しません。境目がざらついて溶けるので、四角い区画に見えにくいのが利点です。",
+    init: function (st) {
+      var cv = document.createElement("canvas");
+      cv.className = "fx";
+      st.appendChild(cv);
+      st._cv = cv;
+    },
+    draw: function (st, t) {
+      var w = st.clientWidth, h = st.clientHeight;
+      var cv = st._cv;
+      var pw = Math.round(w * DPR), ph = Math.round(h * DPR);
+      if (cv.width !== pw) {
+        cv.width = pw; cv.height = ph;
+        st._cover = bakeCover(w, h);
+        st._noise = null;
+      }
+      if (!st._cover) st._cover = bakeCover(w, h);
+      var x = cv.getContext("2d");
+      x.setTransform(1, 0, 0, 1, 0, 0);
+      x.clearRect(0, 0, pw, ph);
+      x.drawImage(st._cover, 0, 0);
+
+      if (!st._noise) {
+        // なめらかな斑を作る（粗い乱数を拡大して補間させる）
+        var nc = document.createElement("canvas");
+        nc.width = Math.max(8, Math.round(pw / 14));
+        nc.height = Math.max(8, Math.round(ph / 14));
+        var nx = nc.getContext("2d");
+        var nd = nx.createImageData(nc.width, nc.height);
+        for (var i = 0; i < nd.data.length; i += 4) {
+          var v = Math.random() * 255;
+          nd.data[i] = nd.data[i + 1] = nd.data[i + 2] = v; nd.data[i + 3] = 255;
+        }
+        nx.putImageData(nd, 0, 0);
+        var big = document.createElement("canvas");
+        big.width = pw; big.height = ph;
+        big.getContext("2d").drawImage(nc, 0, 0, pw, ph);
+        st._noise = big.getContext("2d").getImageData(0, 0, pw, ph).data;
+      }
+
+      var img = x.getImageData(0, 0, pw, ph);
+      var data = img.data, noise = st._noise;
+      var edge = t * 255 * 1.35;    // しきい値。少し余分に振ってから消えきる
+      var soft = 46;
+      for (var j = 0; j < data.length; j += 4) {
+        var n = noise[j];
+        var a = (edge - n) / soft;
+        if (a >= 1) data[j + 3] = 0;
+        else if (a > 0) data[j + 3] = Math.round(data[j + 3] * (1 - a));
+      }
+      x.putImageData(img, 0, 0);
+    },
+    reset: function (st) { this.draw(st, 0); }
+  });
+
+  /* ---------- 画面の組み立て ---------- */
+
+  var cards = document.getElementById("cards");
+  var stages = [];
+
+  EFFECTS.forEach(function (fx) {
+    var card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML =
+      '<div class="head"><span class="name">' + fx.name + '</span>' +
+      '<span class="tag">' + fx.tag + "</span></div>" +
+      '<p class="desc">' + fx.desc + "</p>" +
+      '<div class="stage"><img class="art" alt=""></div>' +
+      '<div class="row"><button class="go">再生</button><button class="rs">戻す</button></div>';
+    cards.appendChild(card);
+
+    var st = card.querySelector(".stage");
+    st.querySelector("img.art").src = artURL;
+    fx.init(st);
+    stages.push({ fx: fx, st: st });
+
+    card.querySelector(".go").addEventListener("click", function () { play(fx, st); });
+    card.querySelector(".rs").addEventListener("click", function () { fx.reset(st); });
+    st.addEventListener("click", function () { play(fx, st); });
+  });
+
+  function play(fx, st) {
+    if (st._raf) cancelAnimationFrame(st._raf);
+    var t0 = performance.now();
+    function frame(now) {
+      var t = Math.min(1, (now - t0) / duration);
+      fx.draw(st, t);
+      if (t < 1) st._raf = requestAnimationFrame(frame);
+      else st._raf = 0;
+    }
+    st._raf = requestAnimationFrame(frame);
+  }
+
+  document.getElementById("playAll").addEventListener("click", function () {
+    stages.forEach(function (s) { play(s.fx, s.st); });
+  });
+  document.getElementById("resetAll").addEventListener("click", function () {
+    stages.forEach(function (s) { if (s.st._raf) cancelAnimationFrame(s.st._raf); s.fx.reset(s.st); });
+  });
+
+  document.getElementById("speed").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-ms]");
+    if (!b) return;
+    duration = Number(b.dataset.ms);
+    [].forEach.call(this.children, function (c) { c.classList.toggle("on", c === b); });
+  });
+
+  // 最初は覆われた状態で見せる
+  function initialDraw() {
+    stages.forEach(function (s) { s.fx.reset(s.st); });
+  }
+  if (document.readyState === "complete") initialDraw();
+  else window.addEventListener("load", initialDraw);
+  window.addEventListener("resize", initialDraw);
+})();
+</script>
+</body>
+</html>
