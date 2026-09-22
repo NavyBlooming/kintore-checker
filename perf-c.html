@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>C方式 — キャンバスを焼き直す</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1b1e24; --panel-2: #23272f; --line: #2e333c;
+    --fg: #e8eaee; --muted: #9aa2ae; --accent: #ff5ca6;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+    max-width: 560px; margin-inline: auto;
+  }
+  h1 { font-size: 1rem; margin: 0 0 4px; }
+  .lead { font-size: 0.76rem; color: var(--muted); line-height: 1.7; margin: 0 0 16px; }
+  .card { background: var(--panel); border-radius: 14px; padding: 13px; margin-bottom: 14px; }
+  .card > label { display: block; font-size: 0.76rem; color: var(--muted); margin-bottom: 9px; }
+
+  .stage {
+    position: relative; width: 100%; aspect-ratio: 3 / 4;
+    border-radius: 12px; overflow: hidden; background: var(--panel-2);
+    display: grid; place-items: center;
+  }
+  .stage .layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .stage canvas.layer { object-fit: fill; }
+  .stage .empty { position: relative; font-size: 0.78rem; color: var(--muted); text-align: center; line-height: 1.8; padding: 0 20px; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--panel-2); border-radius: 10px; padding: 9px 10px; }
+  .stat b { display: block; font-size: 1.15rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 0.68rem; color: var(--muted); }
+
+  .row { display: flex; align-items: center; gap: 9px; margin-top: 11px; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  .val { font-size: 0.76rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 54px; text-align: right; }
+
+  .seg { display: flex; gap: 6px; }
+  .seg button { flex: 1; padding: 9px 0; font-size: 0.76rem; }
+  .seg button.on { background: var(--accent); color: #fff; }
+
+  button {
+    font: inherit; color: var(--fg); background: var(--panel-2);
+    border: 0; border-radius: 10px; padding: 10px 13px; font-size: 0.8rem; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.wide { width: 100%; }
+  button:active { filter: brightness(1.15); }
+  input[type=file] { display: none; }
+
+  .note { font-size: 0.72rem; color: var(--muted); line-height: 1.7; margin: 9px 0 0; }
+  .nav { font-size: 0.78rem; margin-top: 18px; }
+  .nav a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>C方式 — キャンバスを焼き直す</h1>
+<p class="lead">
+  いまの本体と同じ作りのまま、覆いを一定の間隔で焼き直します。
+  縮小してから引き伸ばす手順は本体と同じなので、ぼかしの見え方も本体と揃います。
+  間隔を 0 にすると毎コマ焼き直す（A方式）状態になります。
+</p>
+
+<div class="card">
+  <label>動画</label>
+  <div class="stage" id="stage">
+    <div class="empty" id="empty">動画を選ぶと、ここで確認できます。<br>選んだ動画は端末の中だけに保存されます。</div>
+    <video class="layer" id="v" muted loop playsinline preload="auto" hidden></video>
+    <canvas class="layer" id="cover" hidden></canvas>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="fps">—</b><span>いまのFPS</span></div>
+    <div class="stat"><b id="minfps">—</b><span>最低FPS</span></div>
+    <div class="stat"><b id="cost">—</b><span>JSの描画時間</span></div>
+  </div>
+
+  <div class="row">
+    <button id="pick" class="primary">動画を選ぶ</button>
+    <button id="reset">最低FPSを戻す</button>
+    <button id="forget">消す</button>
+  </div>
+  <input type="file" id="file" accept="video/*">
+  <p class="note">描画時間は、覆いを1回焼き直すのにかかった時間の平均です。16.7ms を超えると60コマに間に合いません。</p>
+</div>
+
+<div class="card">
+  <label>焼き直す間隔</label>
+  <div class="seg" id="ivSeg"></div>
+  <p class="note" id="ivNote"></p>
+</div>
+
+<div class="card">
+  <label>開いたマス</label>
+  <div class="row">
+    <input type="range" id="tiles" min="0" max="36" step="1" value="12">
+    <span class="val" id="tilesVal">12 / 36</span>
+  </div>
+  <div class="row">
+    <button id="auto" class="wide">1マスずつ自動で開く</button>
+  </div>
+</div>
+
+<p class="note">
+  発熱と電池の減りは数字に出ません。しばらく開いたまま置いて、端末が熱くならないかも見てください。
+</p>
+
+<p class="nav"><a href="./perf-b.html">→ B方式（動画を2枚重ねる）を見る</a></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var TOTAL = 36;
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var IV_CHOICES = [0, 100, 200, 300, 500];
+  var IV_LABEL = { 0: "毎コマ", 100: "100ms", 200: "200ms", 300: "300ms", 500: "500ms" };
+
+  var stage = document.getElementById("stage");
+  var v = document.getElementById("v");
+  var cv = document.getElementById("cover");
+  var empty = document.getElementById("empty");
+  var tilesEl = document.getElementById("tiles");
+  var tilesVal = document.getElementById("tilesVal");
+  var url = null;
+  var interval = 300;
+  var lastBake = 0;
+  var autoTimer = 0;
+
+  var canBlur = (function () {
+    try {
+      var c = document.createElement("canvas").getContext("2d");
+      if (!c) return false;
+      c.filter = "blur(2px)";
+      return c.filter !== "none";
+    } catch (e) { return false; }
+  })();
+
+  /* ---------- 動画の保存（2つのページで同じものを使う） ---------- */
+
+  function openDB() {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open("kc-perf", 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore("media"); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+  }
+  function putVideo(db, blob) {
+    return new Promise(function (res, rej) {
+      var t = db.transaction("media", "readwrite");
+      t.objectStore("media").put(blob, "v");
+      t.oncomplete = function () { res(); };
+      t.onerror = function () { rej(t.error); };
+    });
+  }
+  function getVideo(db) {
+    return new Promise(function (res, rej) {
+      var t = db.transaction("media", "readonly");
+      var q = t.objectStore("media").get("v");
+      t.oncomplete = function () { res(q.result || null); };
+      t.onerror = function () { rej(t.error); };
+    });
+  }
+
+  /* ---------- マス目 ---------- */
+
+  function gridOf(total, w, h) {
+    if (!w || !h) return 6;
+    var best = 1, score = Infinity;
+    for (var c = 1; c <= total; c++) {
+      if (total % c) continue;
+      var r = total / c;
+      var d = Math.abs(Math.log((w / c) / (h / r)));
+      if (d < score) { score = d; best = c; }
+    }
+    return best;
+  }
+
+  function order(total) {
+    var seed = 20260922, arr = [], i;
+    for (i = 0; i < total; i++) arr.push(i);
+    for (i = total - 1; i > 0; i--) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      var m = seed % (i + 1);
+      var t = arr[i]; arr[i] = arr[m]; arr[m] = t;
+    }
+    return arr;
+  }
+  var ORD = order(TOTAL);
+
+  function tileRect(i, cols, rows, w, h) {
+    var c = i % cols, r = Math.floor(i / cols);
+    var x0 = Math.round(c * w / cols), x1 = Math.round((c + 1) * w / cols);
+    var y0 = Math.round(r * h / rows), y1 = Math.round((r + 1) * h / rows);
+    return { x: x0 - 1, y: y0 - 1, w: x1 - x0 + 2, h: y1 - y0 + 2 };
+  }
+
+  /* ---------- 覆い（本体と同じ手順） ---------- */
+
+  var tiny = document.createElement("canvas");
+  var mid = document.createElement("canvas");
+
+  function paint() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h || !url) return;
+
+    var bw = Math.round(w * DPR), bh = Math.round(h * DPR);
+    if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+
+    var x = cv.getContext("2d");
+    x.setTransform(DPR, 0, 0, DPR, 0, 0);
+    x.globalCompositeOperation = "source-over";
+    x.fillStyle = "#262a32";
+    x.fillRect(0, 0, w, h);
+
+    try {
+      // いったん極端に小さく描いてから、2段階で引き伸ばす。
+      var sw = Math.max(5, Math.round(w / 28));
+      var sh = Math.max(5, Math.round(h / 28));
+      if (tiny.width !== sw || tiny.height !== sh) { tiny.width = sw; tiny.height = sh; }
+      var tc = tiny.getContext("2d");
+      tc.imageSmoothingEnabled = true;
+      tc.drawImage(v, 0, 0, sw, sh);
+
+      var mw = Math.max(10, Math.round(w / 6)), mh = Math.max(10, Math.round(h / 6));
+      if (mid.width !== mw || mid.height !== mh) { mid.width = mw; mid.height = mh; }
+      var mc = mid.getContext("2d");
+      mc.imageSmoothingEnabled = true;
+      mc.drawImage(tiny, 0, 0, sw, sh, 0, 0, mw, mh);
+
+      x.imageSmoothingEnabled = true;
+      if (canBlur) x.filter = "blur(10px) saturate(0.85)";
+      x.drawImage(mid, 0, 0, mw, mh, 0, 0, w, h);
+      x.filter = "none";
+    } catch (e) { /* 描けないときは単色のまま */ }
+
+    x.fillStyle = "rgba(16,18,22,0.26)";
+    x.fillRect(0, 0, w, h);
+
+    var n = Number(tilesEl.value);
+    var cols = gridOf(TOTAL, w, h), rows = TOTAL / cols;
+    // 直前の薄い色のまま削ると、その不透明度ぶんしか消えない
+    x.fillStyle = "#000";
+    x.globalCompositeOperation = "destination-out";
+    for (var i = 0; i < n; i++) {
+      var t = tileRect(ORD[i], cols, rows, w, h);
+      x.fillRect(t.x, t.y, t.w, t.h);
+    }
+    x.globalCompositeOperation = "source-over";
+  }
+
+  /* ---------- 動画の取り込み ---------- */
+
+  function useBlob(blob) {
+    if (url) URL.revokeObjectURL(url);
+    url = URL.createObjectURL(blob);
+    empty.hidden = true;
+    v.hidden = cv.hidden = false;
+    v.src = url;
+    v.addEventListener("loadedmetadata", function () {
+      if (v.videoWidth && v.videoHeight) {
+        stage.style.aspectRatio = v.videoWidth + " / " + v.videoHeight;
+      }
+      paint();
+    }, { once: true });
+    v.play().catch(function () {});
+  }
+
+  document.getElementById("pick").addEventListener("click", function () {
+    document.getElementById("file").click();
+  });
+
+  document.getElementById("file").addEventListener("change", function (e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    useBlob(f);
+    openDB().then(function (db) { return putVideo(db, f); }).catch(function () {});
+  });
+
+  /* ---------- 計測 ---------- */
+
+  var frames = 0, mark = performance.now(), start = mark, minFps = 0;
+  var costSum = 0, costN = 0;
+
+  function tick(now) {
+    frames++;
+
+    if (url && (interval === 0 || now - lastBake >= interval)) {
+      lastBake = now;
+      var t0 = performance.now();
+      paint();
+      costSum += performance.now() - t0;
+      costN++;
+      if (costN > 60) { costSum = costSum / costN * 30; costN = 30; }
+    }
+
+    if (now - mark >= 1000) {
+      var fps = Math.round(frames * 1000 / (now - mark));
+      document.getElementById("fps").textContent = fps;
+      if (now - start > 2000) {
+        if (!minFps || fps < minFps) minFps = fps;
+        document.getElementById("minfps").textContent = minFps;
+      }
+      document.getElementById("cost").textContent =
+        costN ? (costSum / costN).toFixed(1) + "ms" : "—";
+      frames = 0; mark = now;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  document.getElementById("reset").addEventListener("click", function () {
+    minFps = 0; start = performance.now(); costSum = 0; costN = 0;
+    document.getElementById("minfps").textContent = "—";
+  });
+
+  /* ---------- 操作 ---------- */
+
+  function renderIv() {
+    document.getElementById("ivSeg").innerHTML = IV_CHOICES.map(function (n) {
+      return '<button data-iv="' + n + '" class="' + (n === interval ? "on" : "") + '">' +
+        IV_LABEL[n] + "</button>";
+    }).join("");
+    document.getElementById("ivNote").textContent = interval === 0
+      ? "毎コマ焼き直します。一番なめらかですが、一番重い設定です。"
+      : "1秒あたり約 " + Math.round(1000 / interval) + " 回焼き直します。";
+  }
+
+  document.getElementById("ivSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-iv]");
+    if (!b) return;
+    interval = Number(b.dataset.iv);
+    costSum = 0; costN = 0;
+    renderIv();
+  });
+
+  tilesEl.addEventListener("input", function () {
+    tilesVal.textContent = tilesEl.value + " / " + TOTAL;
+    paint();
+  });
+
+  window.addEventListener("resize", paint);
+
+  document.getElementById("auto").addEventListener("click", function () {
+    if (autoTimer) {
+      clearInterval(autoTimer); autoTimer = 0;
+      this.textContent = "1マスずつ自動で開く";
+      return;
+    }
+    this.textContent = "止める";
+    autoTimer = setInterval(function () {
+      var n = Number(tilesEl.value);
+      tilesEl.value = n >= TOTAL ? 0 : n + 1;
+      tilesVal.textContent = tilesEl.value + " / " + TOTAL;
+      paint();
+    }, 400);
+  });
+
+  // 確かめ終わったら端末から消せるようにしておく
+  document.getElementById("forget").addEventListener("click", function () {
+    if (!confirm("保存した動画をこの端末から消します。")) return;
+    openDB().then(function (db) {
+      return new Promise(function (res) {
+        var t = db.transaction("media", "readwrite");
+        t.objectStore("media").delete("v");
+        t.oncomplete = res; t.onerror = res;
+      });
+    }).then(function () { location.reload(); });
+  });
+
+  renderIv();
+  tilesVal.textContent = tilesEl.value + " / " + TOTAL;
+
+  openDB().then(getVideo).then(function (blob) {
+    if (blob) useBlob(blob);
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>
