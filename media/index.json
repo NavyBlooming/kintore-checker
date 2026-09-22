@@ -1,3 +1,13 @@
 {
- "packs": []
+ "packs": [
+  {
+   "id": "pack02",
+   "name": "パック 2",
+   "files": [
+    "05cb2206ff305161.kcz",
+    "a4540b7b1d5040cf.kcz",
+    "e239c9b07133a908.kcz"
+   ]
+  }
+ ]
 }
