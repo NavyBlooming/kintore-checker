@@ -1526,6 +1526,9 @@
   document.getElementById("openSettings").addEventListener("click", function () {
     renderSettings();
     sheetBg.classList.add("open");
+    // パックは後から増える。開くたびに取りに行かないと、
+    // アプリを閉じるまで新しいパックが出てこない。
+    loadPacks().then(renderPacks);
   });
   document.getElementById("closeSheet").addEventListener("click", function () {
     sheetBg.classList.remove("open");
