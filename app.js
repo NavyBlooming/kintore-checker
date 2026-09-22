@@ -39,6 +39,8 @@
     how: YT + "OPeDVbIDcgg"
   };
 
+  var SHORT = { chest: "胸", legs: "脚", back: "背" };
+
   var SESSIONS = [
     {
       id: "chest", label: "胸の日",
@@ -122,6 +124,7 @@
         '<span><i class="swatch" style="background:var(--panel-2)"></i>予定日</span>' +
         '<span><i class="swatch" style="background:#2f5a4c"></i>途中</span>' +
         '<span><i class="swatch" style="background:var(--accent)"></i>全セット完了</span>' +
+        '<span>胸・脚・背 はその日のメニュー</span>' +
       '</div>' +
     '</section>' +
 
@@ -238,7 +241,8 @@
       sampleSets: 0,
       debug: false,
       seasons: [],
-      pack: null
+      pack: null,
+      rot: 0
     };
     try {
       var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
@@ -254,6 +258,7 @@
       if (typeof s.sampleSets === "number") d.sampleSets = s.sampleSets;
       if (Array.isArray(s.seasons) && s.seasons.length) d.seasons = s.seasons;
       if (typeof s.pack === "string") d.pack = s.pack;
+      if (typeof s.rot === "number") d.rot = ((s.rot % 3) + 3) % 3;
       d.debug = !!s.debug;
     } catch (e) {}
     if (DEMO) d.debug = true;
@@ -559,18 +564,38 @@
     if (settings.moved[k]) return sessionById(settings.moved[k]);
     if (settings.skipped[k]) return null;
 
+    var idx;
     if (settings.mode === "interval") {
       var n = dayDiff(settings.anchor, date);
       var iv = settings.interval;
       if (((n % iv) + iv) % iv !== 0) return null;
-      var idx = Math.floor(n / iv);
-      return SESSIONS[((idx % SESSIONS.length) + SESSIONS.length) % SESSIONS.length];
+      idx = Math.floor(n / iv);
+    } else {
+      var days = plannedDays();
+      idx = days.indexOf(date.getDay());
+      if (idx < 0) return null;
     }
+    return SESSIONS[rotate(idx)];
+  }
 
-    var days = plannedDays();
-    var p = days.indexOf(date.getDay());
-    if (p < 0) return null;
-    return SESSIONS[p % SESSIONS.length];
+  // 胸 → 脚 → 背中 の並びを、settings.rot だけずらす。
+  // 今日のメニューを選び直すと、以降もその順で続く。
+  function rotate(i) {
+    var n = SESSIONS.length;
+    return (((i + settings.rot) % n) + n) % n;
+  }
+
+  // date のメニューが sess になるように、並び全体をずらす
+  function pickSession(date, sessId) {
+    var cur = sessionFor(date);
+    if (!cur || cur.id === sessId) return;
+    var from = 0, to = 0, i;
+    for (i = 0; i < SESSIONS.length; i++) {
+      if (SESSIONS[i].id === cur.id) from = i;
+      if (SESSIONS[i].id === sessId) to = i;
+    }
+    settings.rot = (((settings.rot + to - from) % 3) + 3) % 3;
+    saveSettings();
   }
 
   // 前日が未実施のトレーニング日で、今日が休養日なら繰り上げられる
@@ -619,6 +644,19 @@
   /* ---------- sets ---------- */
 
   function setsOn(k, moveId) { return (log[k] && log[k][moveId]) || 0; }
+
+  // 記録された種目からその日のメニューを割り出す。腹は共通なので手がかりにしない。
+  function doneSession(k) {
+    var o = log[k];
+    if (!o) return null;
+    for (var i = 0; i < SESSIONS.length; i++) {
+      var mv = SESSIONS[i].moves;
+      for (var j = 0; j < mv.length; j++) {
+        if (mv[j].id !== ABS.id && o[mv[j].id]) return SESSIONS[i];
+      }
+    }
+    return null;
+  }
 
   function daySets(k) {
     var o = log[k], n = 0;
@@ -1194,10 +1232,12 @@
     document.getElementById("sessDate").textContent =
       (date.getMonth() + 1) + "月" + date.getDate() + "日（" + DOW[date.getDay()] + "）";
 
-    if (settings.debug) {
+    // 休養日はメニューを選べない。ずらすボタンのほうを使う
+    if (settings.debug || sess) {
       tabs.hidden = false;
       tabs.innerHTML = SESSIONS.map(function (s) {
-        return '<button data-sess="' + s.id + '" class="' + (s.id === sess.id ? "on" : "") + '">' + s.label + "</button>";
+        return '<button data-sess="' + s.id + '" class="' +
+          (sess && s.id === sess.id ? "on" : "") + '">' + s.label + "</button>";
       }).join("");
     } else {
       tabs.hidden = true;
@@ -1287,9 +1327,13 @@
       if (got >= tgt && got > 0) cls += " full";
       if (k === tdyKey) cls += " today";
       if (settings.debug && k === selDate) cls += " sel";
+      // やった日は実際のメニュー、これからの予定日は予定のメニューを出す
+      var did = doneSession(k);
+      var mark = did ? SHORT[did.id] : (planned ? SHORT[sessionFor(date).id] : "");
       cells.push(
         '<button class="' + cls + '" data-k="' + k + '"' + (settings.debug ? "" : " disabled") + ">" +
-        d + (planned || got > 0 ? '<i class="dot"></i>' : "") + "</button>"
+        d + (mark ? '<i class="mk' + (did ? "" : " plan") + '">' + mark + "</i>" : "") +
+        "</button>"
       );
     }
     document.getElementById("calGrid").innerHTML = cells.join("");
@@ -1510,8 +1554,14 @@
   document.getElementById("sessTabs").addEventListener("click", function (e) {
     var b = e.target.closest("[data-sess]");
     if (!b) return;
-    selSession = b.dataset.sess;
-    renderSession();
+    if (settings.debug) {
+      // デバッグ中は、予定を変えずに記録先だけ切り替える
+      selSession = b.dataset.sess;
+      renderSession();
+      return;
+    }
+    pickSession(today(), b.dataset.sess);
+    renderAll();
   });
 
   document.getElementById("calGrid").addEventListener("click", function (e) {

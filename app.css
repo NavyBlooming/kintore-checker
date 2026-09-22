@@ -168,8 +168,10 @@
   .day.today { box-shadow: inset 0 0 0 1.5px var(--muted); }
   .day.full.today { box-shadow: inset 0 0 0 1.5px var(--text); }
   .day.sel { box-shadow: inset 0 0 0 2px var(--warn); }
-  .day .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
-  .day.full .dot, .day.part .dot { background: rgba(255,255,255,0.7); }
+  /* その日のメニュー。やった日は実績、これからは予定 */
+  .day .mk { font-style: normal; font-size: 0.58rem; line-height: 1; color: var(--accent); }
+  .day .mk.plan { color: var(--muted); }
+  .day.full .mk, .day.part .mk { color: rgba(255,255,255,0.85); }
 
   .legend { display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: 10px; font-size: 0.7rem; color: var(--muted); }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
