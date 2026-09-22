@@ -463,13 +463,21 @@
     return urls[im.id];
   }
 
-  function mediaHtml(m) {
+  function artHtml(m) {
     if (!m.rec) return sampleTpl.innerHTML;
     if (m.rec.type === "video") {
       return '<video class="art" muted loop playsinline autoplay preload="auto">' +
         '<source src="' + urlFor(m.rec) + '" type="' + (m.rec.mime || "video/mp4") + '"></video>';
     }
     return '<img class="art" src="' + urlFor(m.rec) + '" alt="">';
+  }
+
+  // 素材を2枚重ねる。下はぼかした層で、上の鮮明な層を開いたマスぶんだけ見せる。
+  // 下の層は動画ならそのまま動くので、モヤも一緒に動く。
+  function mediaHtml(m) {
+    return '<div class="haze">' + artHtml(m) + "</div>" +
+      '<div class="tint"></div>' +
+      '<div class="sharp">' + artHtml(m) + "</div>";
   }
 
   // 表示対象。登録素材が無いデモではサンプルを返す
@@ -536,73 +544,45 @@
 
   /* ---------- 覆いと、なぞって削る演出 ----------
    *
-   * 覆いは1枚のキャンバス。ぼかした素材を焼いておき、進み具合に応じて
-   * 蛇行する筆跡ぶんだけ削り取る。削る形は進み具合だけで決まるので、
-   * 開き直しても同じ見た目が再現される。
-   * 削る層とピンクの層は別のキャンバスに分ける。同じ層だとピンクまで削れてしまう。
+   * 覆いはぼかした素材そのもの。上に鮮明な素材を重ね、開いた区画ぶんだけ
+   * CSS のマスクで見せる。隙間が出ても見えるのはぼかした側なので、
+   * 開けすぎになることがない。素材が動画なら、モヤも一緒に動く。
+   * ピンクの光は別のキャンバスに描く。
    */
 
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
   var TILE_MS = 330;   // 1区画を削りきるまで。順に1区画ずつ進む
   var PINK = "255,92,166";
 
-  var baked = null;       // ぼかした素材
-  var bakedKey = "";
   var scratchRAF = 0;
+  var syncTimer = 0;
 
-  var canBlur = (function () {
-    try {
-      var c = document.createElement("canvas").getContext("2d");
-      if (!c) return false;
-      c.filter = "blur(2px)";
-      return c.filter !== "none";
-    } catch (e) { return false; }
-  })();
-
-  function bakeCover(stage, mediaId) {
+  // ぼかしはステージの大きさに合わせる。固定値だと、大きい画面で効きが弱い。
+  // ぼかすと縁が薄くなるので、その幅ぶん引き伸ばして縁を画面の外へ出す。
+  function hazeStyle(stage) {
     var w = stage.clientWidth, h = stage.clientHeight;
-    if (!w || !h) return null;
-    var key = mediaId + "|" + Math.round(w) + "x" + Math.round(h);
-    if (baked && bakedKey === key) return baked;
-    var media = stage.querySelector("img.art, video.art");
-    var c = document.createElement("canvas");
-    c.width = Math.round(w * DPR);
-    c.height = Math.round(h * DPR);
-    var x = c.getContext("2d");
-    x.scale(DPR, DPR);
-    x.fillStyle = "#262a32";
-    x.fillRect(0, 0, w, h);
-    if (media) {
-      try {
-        // いったん極端に小さく描いてから、2段階で引き伸ばす。
-        // canvas の filter が使えない端末（Safari の多くの版）でも確実にぼける。
-        var sw = Math.max(5, Math.round(w / 28));
-        var sh = Math.max(5, Math.round(h / 28));
-        var tiny = document.createElement("canvas");
-        tiny.width = sw; tiny.height = sh;
-        var tc = tiny.getContext("2d");
-        tc.imageSmoothingEnabled = true;
-        tc.drawImage(media, 0, 0, sw, sh);
-
-        var mid = document.createElement("canvas");
-        mid.width = Math.max(10, Math.round(w / 6));
-        mid.height = Math.max(10, Math.round(h / 6));
-        var mc = mid.getContext("2d");
-        mc.imageSmoothingEnabled = true;
-        mc.drawImage(tiny, 0, 0, sw, sh, 0, 0, mid.width, mid.height);
-
-        x.imageSmoothingEnabled = true;
-        if (canBlur) x.filter = "blur(10px) saturate(0.85)";
-        x.drawImage(mid, 0, 0, mid.width, mid.height, 0, 0, w, h);
-        x.filter = "none";
-      } catch (e) { /* 描けない素材は単色のまま */ }
-    }
-    x.fillStyle = "rgba(16,18,22,0.26)";
-    x.fillRect(0, 0, w, h);
-    baked = c;
-    bakedKey = key;
-    return c;
+    if (!w || !h) return;
+    var el = stage.querySelector(".haze");
+    if (!el) return;
+    var r = Math.max(12, Math.round(Math.max(w, h) / 22));
+    var pad = r * 2;
+    var s = Math.max((w + pad * 2) / w, (h + pad * 2) / h);
+    el.style.filter = "blur(" + r + "px) saturate(0.85)";
+    el.style.transform = "scale(" + s.toFixed(3) + ")";
   }
+
+  // 同じ動画を2本再生するので時刻が少しずつずれる。たまに合わせておく。
+  function syncHaze(stage) {
+    if (syncTimer) { clearInterval(syncTimer); syncTimer = 0; }
+    var a = stage.querySelector(".haze video");
+    var b = stage.querySelector(".sharp video");
+    if (!a || !b) return;
+    syncTimer = setInterval(function () {
+      if (!document.body.contains(b) || b.paused || !b.duration) return;
+      if (Math.abs(a.currentTime - b.currentTime) > 0.25) a.currentTime = b.currentTime;
+    }, 2000);
+  }
+
 
   // 区画の並び。素材ごとに固定なので、開き直しても同じ順で開く
   function order(id, total) {
@@ -633,12 +613,15 @@
     return best;
   }
 
-  // 区画の矩形。隣と1pxだけ重ねて、境目に覆いの筋が残らないようにする
-  function tileRect(i, cols, rows, w, h) {
-    var c = i % cols, r = Math.floor(i / cols);
-    var x0 = Math.round(c * w / cols), x1 = Math.round((c + 1) * w / cols);
+  // 区画の矩形。c0〜c1 をまとめて1つにできる
+  function spanRect(c0, c1, r, cols, rows, w, h, k) {
+    var x0 = Math.round(c0 * w / cols), x1 = Math.round((c1 + 1) * w / cols);
     var y0 = Math.round(r * h / rows), y1 = Math.round((r + 1) * h / rows);
-    return { x: x0 - 1, y: y0 - 1, w: x1 - x0 + 2, h: y1 - y0 + 2 };
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, k: k };
+  }
+
+  function tileRect(i, cols, rows, w, h) {
+    return spanRect(i % cols, i % cols, Math.floor(i / cols), cols, rows, w, h, -1);
   }
 
   function stageCanvas(stage, cls) {
@@ -672,50 +655,82 @@
     };
   }
 
+  // 開いた区画を、行ごとにひとつづきの帯へまとめる。
+  // 区画数が多い設定でも、マスクの層数が増えすぎない。
+  function openRects(revealed, partial, ord, cols, rows, w, h) {
+    var open = {}, i;
+    for (i = 0; i < revealed; i++) open[ord[i]] = 1;
+    var cur = partial ? ord[partial.index] : -1;
+    var out = [];
+    for (var r = 0; r < rows; r++) {
+      var run = -1;
+      for (var c = 0; c <= cols; c++) {
+        var idx = r * cols + c;
+        if (c < cols && open[idx]) { if (run < 0) run = c; continue; }
+        if (run >= 0) { out.push(spanRect(run, c - 1, r, cols, rows, w, h, -1)); run = -1; }
+        if (c < cols && idx === cur) out.push(spanRect(c, c, r, cols, rows, w, h, partial.k));
+      }
+    }
+    return out;
+  }
+
+  // 鮮明な層を、渡した矩形のぶんだけ見せる。
+  // k が 0以上の矩形は削っている最中で、左から右へ境目をぼかしながら開く。
+  function setMask(el, rects) {
+    if (!rects) {
+      el.style.webkitMaskImage = el.style.maskImage = "none";
+      return;
+    }
+    var img = [], pos = [], size = [];
+    for (var i = 0; i < rects.length; i++) {
+      var t = rects[i];
+      if (t.k < 0) {
+        img.push("linear-gradient(rgba(0,0,0,1),rgba(0,0,0,1))");
+      } else {
+        var edge = Math.round(t.w * Math.max(0, Math.min(1, t.k)));
+        var soft = Math.max(6, Math.round(Math.min(18, t.w * 0.35)));
+        img.push("linear-gradient(to right, rgba(0,0,0,1) " + edge + "px, rgba(0,0,0,0) " +
+          (edge + soft) + "px)");
+      }
+      pos.push(t.x + "px " + t.y + "px");
+      size.push(t.w + "px " + t.h + "px");
+    }
+    var mi = img.join(","), mp = pos.join(","), ms = size.join(",");
+    el.style.webkitMaskImage = mi;
+    el.style.webkitMaskPosition = mp;
+    el.style.webkitMaskSize = ms;
+    el.style.maskImage = mi;
+    el.style.maskPosition = mp;
+    el.style.maskSize = ms;
+  }
+
   // revealed: 開ききった区画の数 / partial: 削っている最中の {index, k}
-  function paintCover(stage, mediaId, revealed, partial) {
+  function applyCover(stage, mediaId, revealed, partial) {
     var w = stage.clientWidth, h = stage.clientHeight;
     if (!w || !h) return;
-    var cov = bakeCover(stage, mediaId);
-    if (!cov) return;
+    var sharp = stage.querySelector(".sharp");
+    var haze = stage.querySelector(".haze");
+    if (!sharp || !haze) return;
+
+    hazeStyle(stage);
 
     var total = settings.sets * TILES_PER_SET;
     var cols = gridOf(total, w, h), rows = total / cols;
     var ord = order(mediaId, total);
 
-    var cv = stageCanvas(stage, "cover");
-    var x = cv.getContext("2d");
-    x.setTransform(DPR, 0, 0, DPR, 0, 0);
-    x.globalCompositeOperation = "source-over";
-    x.clearRect(0, 0, w, h);
-    x.drawImage(cov, 0, 0, cov.width, cov.height, 0, 0, w, h);
+    if (revealed >= total && !partial) {
+      // 開ききったら覆いは要らない。動画なら復号も1本に戻る
+      setMask(sharp, null);
+      sharp.style.visibility = "visible";
+      haze.style.visibility = "hidden";
+      return;
+    }
+    haze.style.visibility = "visible";
 
-    x.globalCompositeOperation = "destination-out";
-    var i, t;
-    for (i = 0; i < Math.min(revealed, total); i++) {
-      t = tileRect(ord[i], cols, rows, w, h);
-      x.fillRect(t.x, t.y, t.w, t.h);
-    }
-    if (partial && partial.index < total) {
-      t = tileRect(ord[partial.index], cols, rows, w, h);
-      x.save();
-      x.beginPath();
-      x.rect(t.x, t.y, t.w, t.h);
-      x.clip();
-      x.lineCap = x.lineJoin = "round";
-      x.lineWidth = t.h * 1.05;
-      var p0 = brushAt(t, 0), p1 = brushAt(t, partial.k);
-      x.beginPath();
-      var n = Math.max(2, Math.round(partial.k * 14));
-      x.moveTo(p0.x, p0.y);
-      for (i = 1; i <= n; i++) {
-        var q = brushAt(t, partial.k * i / n);
-        x.lineTo(q.x, q.y);
-      }
-      x.stroke();
-      x.restore();
-    }
-    x.globalCompositeOperation = "source-over";
+    var rects = openRects(Math.min(revealed, total), partial, ord, cols, rows, w, h);
+    if (!rects.length) { sharp.style.visibility = "hidden"; return; }
+    sharp.style.visibility = "visible";
+    setMask(sharp, rects);
   }
 
   // 削る演出を止める。止め忘れると、残ったコマが次の素材の上に描き続ける
@@ -728,7 +743,7 @@
     stopScratch();
     var w = stage.clientWidth, h = stage.clientHeight;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || !w || !h) { paintCover(stage, mediaId, to, null); clearFx(stage); return; }
+    if (reduce || !w || !h) { applyCover(stage, mediaId, to, null); clearFx(stage); return; }
 
     var total = settings.sets * TILES_PER_SET;
     var cols = gridOf(total, w, h), rows = total / cols;
@@ -752,7 +767,7 @@
       var k = Math.min(1, (el - done * TILE_MS) / TILE_MS);
       var idx = from + done;
       var partial = (done < count) ? { index: idx, k: k } : null;
-      paintCover(stage, mediaId, from + done, partial);
+      applyCover(stage, mediaId, from + done, partial);
 
       // 尾を引かせてから筆先を光らせる
       fx.globalCompositeOperation = "destination-out";
@@ -767,7 +782,7 @@
       }
 
       if (el < span) scratchRAF = requestAnimationFrame(frame);
-      else { scratchRAF = 0; paintCover(stage, mediaId, to, null); fadeOutFx(stage); }
+      else { scratchRAF = 0; applyCover(stage, mediaId, to, null); fadeOutFx(stage); }
     }
     scratchRAF = requestAnimationFrame(frame);
   }
@@ -809,12 +824,11 @@
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
   }
 
-  // 素材の実寸が決まったとき・ステージの大きさが変わったときに覆いを作り直す
+  // 素材の実寸が決まったとき・ステージの大きさが変わったときに覆いを組み直す
   function repaintCover() {
     var stage = document.getElementById("stage");
     if (!stage || !stage.dataset.im) return;
-    baked = null; bakedKey = "";
-    paintCover(stage, stage.dataset.im, progress().tiles, null);
+    applyCover(stage, stage.dataset.im, progress().tiles, null);
   }
 
   function watchStage(stage) {
@@ -829,15 +843,8 @@
     }).observe(stage);
   }
 
-  function refreshCover() {
-    var stage = document.getElementById("stage");
-    if (!stage || !stage.dataset.im) return;
-    bakedKey = "";                 // 大きさが変わったので焼き直す
-    paintCover(stage, stage.dataset.im, progress().tiles, null);
-  }
-
-  window.addEventListener("resize", refreshCover);
-  window.addEventListener("orientationchange", refreshCover);
+  window.addEventListener("resize", repaintCover);
+  window.addEventListener("orientationchange", repaintCover);
 
   /* ---------- render: reveal ---------- */
 
@@ -869,7 +876,6 @@
       document.getElementById("progSub").textContent = "1セットで" + TILES_PER_SET + "マス削れます";
       delete stage.dataset.im;
       lastTiles = -1;
-      baked = null; bakedKey = "";
       return;
     }
 
@@ -877,23 +883,26 @@
     if (stage.dataset.im !== m.id) {
       stage.innerHTML = mediaHtml(m);
       stage.dataset.im = m.id;
-      baked = null; bakedKey = "";
       lastTiles = -1;
-      var v = stage.querySelector("video");
-      if (v) {
-        v.play().catch(function () {});
-        // 動画は読み込み前の高さが 150px。実寸が分かった時点で覆いを作り直す
-        v.addEventListener("loadedmetadata", repaintCover);
-        v.addEventListener("loadeddata", repaintCover);
+      // ぼかす側と鮮明な側の2枚があるので、どちらも動かす
+      var vs = stage.querySelectorAll("video");
+      for (var vi = 0; vi < vs.length; vi++) {
+        vs[vi].play().catch(function () {});
+        // 動画は読み込み前の高さが 150px。実寸が分かった時点で覆いを組み直す
+        vs[vi].addEventListener("loadedmetadata", repaintCover);
+        vs[vi].addEventListener("loadeddata", repaintCover);
       }
-      var im0 = stage.querySelector("img.art");
-      if (im0 && !im0.complete) im0.addEventListener("load", repaintCover);
+      var ims = stage.querySelectorAll("img.art");
+      for (var ii = 0; ii < ims.length; ii++) {
+        if (!ims[ii].complete) ims[ii].addEventListener("load", repaintCover);
+      }
       watchStage(stage);
+      syncHaze(stage);
     }
 
     // 進んだときだけ、区画を削る演出を走らせる
     if (lastTiles >= 0 && p.tiles > lastTiles) scratchTo(stage, m.id, lastTiles, p.tiles);
-    else { stopScratch(); paintCover(stage, m.id, p.tiles, null); clearFx(stage); }
+    else { stopScratch(); applyCover(stage, m.id, p.tiles, null); clearFx(stage); }
     lastTiles = p.tiles;
 
     var rest = 0;

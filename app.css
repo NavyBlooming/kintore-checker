@@ -61,16 +61,24 @@
   .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
   .stage img, .stage video { display: block; width: 100%; height: auto; }
 
-  /* 覆い。ぼかした素材を焼いたものを、なぞった跡だけ削り取る */
-  .stage canvas.cover,
+  /* 覆い。ぼかした層を下に敷き、上の鮮明な層を開いた区画ぶんだけ見せる。
+     ぼかしの強さと引き伸ばしは、ステージの大きさに応じて JS が入れる */
+  .stage .tint,
+  .stage .sharp,
   .stage canvas.fxlayer {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
     pointer-events: none;
-    display: block;
   }
+  .stage .haze { transform-origin: 50% 50%; }
+  .stage .tint { background: rgba(16,18,22,0.30); }
+  .stage .sharp { -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+  .stage .sharp > img.art,
+  .stage .sharp > video.art,
+  .stage .sharp > svg.art {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .stage canvas.fxlayer { width: 100%; height: 100%; display: block; }
 
   .done-banner {
     position: absolute; left: 0; right: 0; bottom: 0;
