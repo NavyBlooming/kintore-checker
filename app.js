@@ -24,30 +24,48 @@
   var LS_LOG = "wt.log.v3" + SUFFIX;
   var DB_NAME = DEMO ? "workout-tracker-demo" : "workout-tracker";
 
-  var ABS = { id: "abs", name: "ニートゥチェスト", reps: 10, note: "腹。どの回でも最後に" };
+  // やり方の動画。ザ・きんにくTV の解説動画が種目に対応するものは直接、
+  // 対応する回が確かめられないものは、チャンネル名を添えた検索に飛ばす。
+  // 検索なら動画が入れ替わっても行き先が切れない。
+  function howTo(q) {
+    return "https://www.youtube.com/results?search_query=" +
+      encodeURIComponent("なかやまきんに君 " + q + " やり方");
+  }
+  var YT = "https://www.youtube.com/watch?v=";
+
+  var ABS = {
+    id: "abs", name: "ニートゥチェスト", reps: 10, note: "腹。どの回でも最後に",
+    how: YT + "OPeDVbIDcgg"
+  };
 
   var SESSIONS = [
     {
       id: "chest", label: "胸の日",
       moves: [
-        { id: "pushup", name: "腕立て伏せ", reps: 10, note: "きつければ膝をついて" },
-        { id: "kickback", name: "キックバック", reps: 20, note: "左右10回ずつ。ペットボトルを持つ" },
+        { id: "pushup", name: "腕立て伏せ", reps: 10, note: "きつければ膝をついて",
+          how: YT + "k4fsFKCp5iU" },
+        { id: "kickback", name: "キックバック", reps: 20, note: "左右10回ずつ。ペットボトルを持つ",
+          how: howTo("キックバック 二の腕") },
         ABS
       ]
     },
     {
       id: "legs", label: "脚の日",
       moves: [
-        { id: "squat", name: "スクワット", reps: 10, note: "椅子に座って立つ動作から" },
-        { id: "calf", name: "カーフレイズ", reps: 15, note: "かかとの上げ下げ" },
+        { id: "squat", name: "スクワット", reps: 10, note: "椅子に座って立つ動作から",
+          how: YT + "SFnfYPktYBU" },
+        { id: "calf", name: "カーフレイズ", reps: 15, note: "かかとの上げ下げ",
+          how: howTo("カーフレイズ ふくらはぎ") },
         ABS
       ]
     },
     {
       id: "back", label: "背中の日",
       moves: [
-        { id: "row", name: "ベントオーバーローイング", reps: 20, note: "左右10回ずつ。ペットボトルを持つ" },
-        { id: "backext", name: "バックエクステンション", reps: 10, note: "うつ伏せから上体を反らす" },
+        { id: "row", name: "ベントオーバーローイング", reps: 20, note: "左右10回ずつ。ペットボトルを持つ",
+          how: howTo("ベントオーバーローイング 背中") },
+        { id: "backext", name: "バックエクステンション", reps: 10, note: "うつ伏せから上体を反らす",
+          how: howTo("バックエクステンション 背中") },
         ABS
       ]
     }
@@ -994,7 +1012,9 @@
       return '<div class="move" data-move="' + m.id + '">' +
         '<div class="move-top"><div>' +
         '<div class="move-name">' + m.name + "</div>" +
-        '<div class="move-note">' + m.note + "</div>" +
+        '<div class="move-note">' + m.note +
+        (m.how ? ' <a class="how" href="' + m.how + '" target="_blank" rel="noopener">やり方 ↗</a>' : "") +
+        "</div>" +
         (settings.debug && n > 0 ? '<div class="move-sets">' + n + " セット記録済み</div>" : "") +
         "</div>" +
         '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
