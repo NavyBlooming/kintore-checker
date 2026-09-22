@@ -22,6 +22,7 @@
   var SUFFIX = DEMO ? ".demo" : "";
   var LS_SETTINGS = "wt.settings.v3" + SUFFIX;
   var LS_LOG = "wt.log.v3" + SUFFIX;
+  var LS_PASS = "wt.pass.v1" + SUFFIX;
   var DB_NAME = DEMO ? "workout-tracker-demo" : "workout-tracker";
 
   // やり方の動画。ザ・きんにくTV の解説動画が種目に対応するものは直接、
@@ -163,6 +164,17 @@
           '<p class="note">この端末の中だけに保存され、どこにも送信されません。' +
           'ブラウザのデータを消すと一緒に消えるので、元のファイルは端末に残しておいてください。</p>' +
         '</div>' +
+        '<div class="field">' +
+          '<label>伏せたまま取り込む</label>' +
+          '<div class="pass"><input type="password" id="passInput" ' +
+          'autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="合言葉">' +
+          '<button class="act" id="passSave">保存</button></div>' +
+          '<div class="note" id="passState" style="margin-top:7px"></div>' +
+          '<button class="btn" id="addSealed" style="margin-top:9px">.kcz を取り込む</button>' +
+          '<input type="file" id="sealedInput" multiple>' +
+          '<p class="note">PCで伏せておいたファイルを、中身を出さずに取り込みます。' +
+          '取り込むまで何が入っているかは分かりません。</p>' +
+        '</div>' +
         '<button class="btn quiet" id="closeSheet">閉じる</button>' +
       '</div>' +
     '</div>' +
@@ -231,6 +243,18 @@
   function loadLog() {
     try { return JSON.parse(localStorage.getItem(LS_LOG) || "{}"); } catch (e) { return {}; }
   }
+  // 伏せたファイルを開くための合言葉。素材そのものは復号してから保存するので、
+  // 忘れても取り込み済みのものは読める。困るのは次の取り込みだけ。
+  function loadPass() {
+    try { return localStorage.getItem(LS_PASS) || ""; } catch (e) { return ""; }
+  }
+  function savePass(v) {
+    try {
+      if (v) localStorage.setItem(LS_PASS, v);
+      else localStorage.removeItem(LS_PASS);
+    } catch (e) {}
+  }
+
   function saveLog() {
     try { localStorage.setItem(LS_LOG, JSON.stringify(log)); } catch (e) {}
   }
@@ -252,6 +276,91 @@
       var out = fn(t.objectStore("images"));
       t.oncomplete = function () { resolve(out && out.result !== undefined ? out.result : out); };
       t.onerror = function () { reject(t.error); };
+    });
+  }
+
+  /* ---------- 伏せたファイルを開く ----------
+   *
+   * PC 側の kcz.py が書き出した形式。
+   *   "KCZ2" | 塩16 | かたまりの大きさ4 | ( iv12 | 長さ4 | 暗号文 ) のくりかえし
+   * 最初のかたまりの中身が MIME で、2つ目から本体。MIME を暗号の内側に置くので、
+   * 開くまでは画像か動画かも分からない。
+   *
+   * かたまりごとに読んで復号し、そのつど Blob へ移す。
+   * まるごと読むと素材の大きさぶんメモリを抱えるので、端末によっては落ちる。
+   */
+
+  var KCZ_MAGIC = [75, 67, 90, 50];
+  var KCZ_ITER = 300000;
+  var keyCache = {};          // 塩ごとの鍵。1回の取り込みでは塩が共通なので効く
+
+  function hex(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length; i++) s += ("0" + bytes[i].toString(16)).slice(-2);
+    return s;
+  }
+
+  function deriveKey(pass, salt) {
+    var k = pass + "|" + hex(salt);   // 合言葉を変えたら作り直す
+    if (keyCache[k]) return keyCache[k];
+    keyCache[k] = crypto.subtle
+      .importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"])
+      .then(function (base) {
+        return crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt: salt, iterations: KCZ_ITER, hash: "SHA-256" },
+          base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+      });
+    return keyCache[k];
+  }
+
+  function isSealed(file) {
+    return /\.kcz$/i.test(file.name || "");
+  }
+
+  function openSealed(file, pass) {
+    if (!window.crypto || !crypto.subtle) {
+      return Promise.reject(new Error("この環境では開けません（HTTPS で開いてください）"));
+    }
+    return file.slice(0, 24).arrayBuffer().then(function (buf) {
+      var head = new Uint8Array(buf);
+      if (head.length < 24) throw new Error("ファイルが壊れています");
+      for (var i = 0; i < 4; i++) {
+        if (head[i] !== KCZ_MAGIC[i]) throw new Error("この形式のファイルではありません");
+      }
+      return deriveKey(pass, head.slice(4, 20));
+    }).then(function (key) {
+      var pos = 24, parts = [], mime = null;
+
+      function step() {
+        if (pos >= file.size) {
+          if (mime === null) throw new Error("ファイルが壊れています");
+          return new Blob(parts, { type: mime });
+        }
+        var at = pos;
+        return file.slice(at, at + 16).arrayBuffer().then(function (hb) {
+          var h = new Uint8Array(hb);
+          if (h.length < 16) throw new Error("ファイルが壊れています");
+          var iv = h.slice(0, 12);
+          var len = new DataView(h.buffer, h.byteOffset + 12, 4).getUint32(0, false);
+          pos = at + 16 + len;
+          return file.slice(at + 16, at + 16 + len).arrayBuffer().then(function (cb) {
+            return crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cb);
+          });
+        }).then(function (pb) {
+          var plain = new Uint8Array(pb);
+          if (mime === null) {
+            mime = new TextDecoder().decode(plain.slice(1, 1 + plain[0]));
+          } else {
+            parts.push(new Blob([plain]));   // JS のメモリから逃がす
+          }
+          return step();
+        }, function (e) {
+          // 鍵が違えば復号そのものが失敗する。壊れたまま入ることはない
+          if (e && e.name === "OperationError") throw new Error("合言葉が違うようです");
+          throw e;
+        });
+      }
+      return step();
     });
   }
 
@@ -1142,8 +1251,21 @@
     document.getElementById("viewerIn").innerHTML = "";
   }
 
+  function renderPassState() {
+    var el = document.getElementById("passState");
+    if (!el) return;
+    if (!window.crypto || !crypto.subtle) {
+      el.textContent = "この環境では使えません。HTTPS で開いてください。";
+      return;
+    }
+    el.textContent = loadPass()
+      ? "合言葉は設定済みです。変えるときは入れ直して保存してください。"
+      : "PC 側の .env に入れたものと同じ合言葉を保存してください。";
+  }
+
   function renderSettings() {
     renderSeasons();
+    renderPassState();
 
     var dbgField = document.getElementById("debugField");
     if (DEMO) {
@@ -1349,41 +1471,104 @@
     document.getElementById("fileInput").click();
   });
 
-  document.getElementById("fileInput").addEventListener("change", function (e) {
-    // File の参照を先に配列へ写してから入力欄を空にする。
-    // 順番を逆にすると value を空にした時点で選択が消え、何も保存されない。
+  // blob と名前から1件ぶん作って保存する。素通しでも伏せたものでも通り道は同じ。
+  function storeMedia(blob, name) {
+    var mime = blob.type || "";
+    var rec = {
+      id: String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8),
+      name: name || "ファイル",
+      blob: blob,
+      mime: mime,
+      type: mime.indexOf("video") === 0 ? "video" : "image",
+      sets: 0,
+      season: curSeason().n,
+      added: Date.now()
+    };
+    return tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; });
+  }
+
+  function afterStore(recs) {
+    allImages = allImages.concat(recs);
+    syncImages();
+    delete document.getElementById("stage").dataset.im;
+    renderSettings();
+    renderAll();
+  }
+
+  // File の参照を先に配列へ写してから入力欄を空にする。
+  // 順番を逆にすると value を空にした時点で選択が消え、何も保存されない。
+  function pickedFiles(e) {
     var list = e.target.files ? Array.prototype.slice.call(e.target.files) : [];
     e.target.value = "";
+    return list;
+  }
+
+  function dbOrWarn() {
+    return (dbReady || Promise.resolve()).then(function () {
+      if (!db) throw new Error("この環境では保存できません。プライベートブラウズを解除して開いてください。");
+    });
+  }
+
+  document.getElementById("fileInput").addEventListener("change", function (e) {
+    var list = pickedFiles(e);
     if (!list.length) return;
 
-    (dbReady || Promise.resolve()).then(function () {
-      if (!db) {
-        alert("この環境では保存できません。プライベートブラウズを解除して開いてください。");
-        return;
-      }
-      var jobs = list.map(function (f) {
-        var rec = {
-          id: String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8),
-          name: f.name || "ファイル",
-          blob: f,
-          mime: f.type || "",
-          type: (f.type || "").indexOf("video") === 0 ? "video" : "image",
-          sets: 0,
-          season: curSeason().n,
-          added: Date.now()
-        };
-        return tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; });
-      });
-      return Promise.all(jobs).then(function (recs) {
-        allImages = allImages.concat(recs);
-        syncImages();
-        delete document.getElementById("stage").dataset.im;
-        renderSettings();
-        renderAll();
-      });
-    }).catch(function () {
-      alert("保存に失敗しました。空き容量を確認してください。");
+    dbOrWarn().then(function () {
+      return Promise.all(list.map(function (f) { return storeMedia(f, f.name); }));
+    }).then(afterStore).catch(function (err) {
+      alert((err && err.message) || "保存に失敗しました。空き容量を確認してください。");
     });
+  });
+
+  document.getElementById("addSealed").addEventListener("click", function () {
+    if (!loadPass()) { alert("先に合言葉を保存してください。"); return; }
+    document.getElementById("sealedInput").click();
+  });
+
+  // 伏せたファイルは、復号してそのまま保存する。画面に出す処理は通らない。
+  document.getElementById("sealedInput").addEventListener("change", function (e) {
+    var list = pickedFiles(e);
+    if (!list.length) return;
+    var pass = loadPass();
+    if (!pass) { alert("先に合言葉を保存してください。"); return; }
+
+    var bad = list.filter(function (f) { return !isSealed(f); });
+    if (bad.length) {
+      alert(".kcz のファイルを選んでください。");
+      return;
+    }
+
+    var btn = document.getElementById("addSealed");
+    btn.disabled = true;
+    btn.textContent = "取り込んでいます…";
+
+    dbOrWarn().then(function () {
+      var recs = [];
+      // 1件ずつ順に。まとめて走らせると鍵の導出が重なって無駄が出る
+      return list.reduce(function (chain, f) {
+        return chain.then(function () {
+          return openSealed(f, pass).then(function (blob) {
+            return storeMedia(blob, "封 " + (recs.length + 1));
+          }).then(function (rec) { recs.push(rec); });
+        });
+      }, Promise.resolve()).then(function () { return recs; });
+    }).then(function (recs) {
+      afterStore(recs);
+      alert(recs.length + " 件を取り込みました。何が入っているかは開くまで分かりません。");
+    }).catch(function (err) {
+      alert((err && err.message) || "取り込めませんでした。");
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = ".kcz を取り込む";
+    });
+  });
+
+  document.getElementById("passSave").addEventListener("click", function () {
+    var el = document.getElementById("passInput");
+    savePass(el.value);
+    el.value = "";
+    keyCache = {};
+    renderPassState();
   });
 
   document.getElementById("imgList").addEventListener("click", function (e) {

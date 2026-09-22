@@ -230,6 +230,13 @@
   .viewer-in img, .viewer-in video { max-width: 100%; max-height: 100%; border-radius: 10px; }
   .viewer .btn { flex: none; width: 100%; }
 
+  .pass { display: flex; gap: 7px; }
+  .pass input {
+    flex: 1; min-width: 0; font: inherit; font-size: 0.82rem; color: var(--fg);
+    background: var(--panel-2); border: 0; border-radius: 10px; padding: 10px 11px;
+  }
+  .pass .act { font-size: 0.76rem; color: var(--accent); padding: 8px 10px; flex: none; }
+
   .note { font-size: 0.72rem; color: var(--muted); line-height: 1.7; }
 
   input[type="file"] { display: none; }
