@@ -16,6 +16,7 @@
   var DOW = ["日", "月", "火", "水", "木", "金", "土"];
   var TILES_PER_SET = 6;
   var SET_CHOICES = [6, 12, 24];
+  var PER_MOVE_CHOICES = [1, 2, 3];
   var INTERVAL_CHOICES = [1, 2, 3];
   var INTERVAL_LABEL = { 1: "毎日", 2: "隔日", 3: "3日に1回" };
   var DAY_MS = 86400000;
@@ -161,6 +162,11 @@
           '</div>' +
         '</div>' +
         '<div class="field">' +
+          '<label>1種目あたりのセット数</label>' +
+          '<div class="seg" id="perMoveSeg"></div>' +
+          '<p class="note" id="perMoveNote" style="margin-top:8px"></p>' +
+        '</div>' +
+        '<div class="field">' +
           '<label>1枚あたりのセット数</label>' +
           '<div class="seg" id="setSeg"></div>' +
           '<p class="note" id="setNote" style="margin-top:8px"></p>' +
@@ -237,6 +243,7 @@
       skipped: {},
       shifted: {},
       sets: 6,
+      perMove: 1,
       currentId: null,
       sampleSets: 0,
       debug: false,
@@ -254,6 +261,7 @@
       if (s.skipped && typeof s.skipped === "object") d.skipped = s.skipped;
       if (s.shifted && typeof s.shifted === "object") d.shifted = s.shifted;
       if (SET_CHOICES.indexOf(s.sets) >= 0) d.sets = s.sets;
+      if (PER_MOVE_CHOICES.indexOf(s.perMove) >= 0) d.perMove = s.perMove;
       if (typeof s.currentId === "string") d.currentId = s.currentId;
       if (typeof s.sampleSets === "number") d.sampleSets = s.sampleSets;
       if (Array.isArray(s.seasons) && s.seasons.length) d.seasons = s.seasons;
@@ -667,7 +675,7 @@
 
   function dayTargetSets(date) {
     var s = sessionFor(date);
-    return s ? s.moves.length : 0;
+    return s ? s.moves.length * settings.perMove : 0;
   }
 
   function totalSets() {
@@ -1263,19 +1271,26 @@
     }
 
     document.getElementById("sessTitle").textContent =
-      sess.label + "（" + sess.moves.length + "セット）" +
+      sess.label + "（" + sess.moves.length * settings.perMove + "セット）" +
       (key(date) === key(today()) && shiftedToday() ? " ・繰り上げ" : "");
 
     moves.innerHTML = sess.moves.map(function (m) {
       var n = setsOn(k, m.id);
+      var per = settings.perMove;
       var ctl;
       if (settings.debug) {
         ctl = '<button class="step" data-d="-1"' + (n <= 0 ? " disabled" : "") + ">−1</button>" +
           '<button class="wide plus" data-d="1">セット追加</button>';
-      } else if (n > 0) {
-        ctl = '<button class="wide undo" data-d="-1">完了 ✓　取り消す</button>';
+      } else if (per === 1) {
+        ctl = n > 0
+          ? '<button class="wide undo" data-d="-1">完了 ✓　取り消す</button>'
+          : '<button class="wide plus" data-d="1">セット完了</button>';
       } else {
-        ctl = '<button class="wide plus" data-d="1">セット完了</button>';
+        // 2セット以上のときは、1つ戻すボタンを別に出す
+        ctl = (n > 0 ? '<button class="step" data-d="-1">−1</button>' : "") +
+          (n >= per
+            ? '<button class="wide undo" data-d="0" disabled>完了 ✓</button>'
+            : '<button class="wide plus" data-d="1">セット完了（' + n + " / " + per + "）</button>");
       }
       return '<div class="move" data-move="' + m.id + '">' +
         '<div class="move-top"><div>' +
@@ -1283,7 +1298,10 @@
         '<div class="move-note">' + m.note +
         (m.how ? ' <a class="how" href="' + m.how + '" target="_blank" rel="noopener">やり方 ↗</a>' : "") +
         "</div>" +
-        (settings.debug && n > 0 ? '<div class="move-sets">' + n + " セット記録済み</div>" : "") +
+        (settings.debug && n > 0
+          ? '<div class="move-sets">' + n + " セット記録済み</div>"
+          : (!settings.debug && per > 1 && n > 0
+            ? '<div class="move-sets">' + n + " / " + per + " セット</div>" : "")) +
         "</div>" +
         '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
         '<div class="ctl">' + ctl + "</div></div>";
@@ -1498,7 +1516,17 @@
       return '<button data-sets="' + n + '" class="' + (settings.sets === n ? "on" : "") + '">' + n + "</button>";
     }).join("");
 
-    var perSession = 3;
+    document.getElementById("perMoveSeg").innerHTML = PER_MOVE_CHOICES.map(function (n) {
+      return '<button data-per="' + n + '" class="' + (settings.perMove === n ? "on" : "") + '">' +
+        n + "</button>";
+    }).join("");
+
+    var perSession = 3 * settings.perMove;
+    document.getElementById("perMoveNote").textContent =
+      "1回のトレーニングは 種目3つ × " + settings.perMove + " セットで、合計 " +
+      perSession + " セットです。" +
+      (settings.perMove === 1 ? "きつくなってきたら増やしてください。" : "");
+
     var sessions = Math.ceil(settings.sets / perSession);
     document.getElementById("setNote").textContent =
       "1セットで " + TILES_PER_SET + " マス、合計 " + (settings.sets * TILES_PER_SET) +
@@ -1531,7 +1559,7 @@
 
     var moveId = wrap.dataset.move;
     var d = Number(b.dataset.d);
-    if (d > 0 && !settings.debug && setsOn(k, moveId) >= 1) return;
+    if (d > 0 && !settings.debug && setsOn(k, moveId) >= settings.perMove) return;
     addSet(k, moveId, d);
     applySetDelta(d).then(renderAll, renderAll);
   });
@@ -1643,6 +1671,15 @@
     var i = settings.days.indexOf(n);
     if (i >= 0) { if (settings.days.length > 1) settings.days.splice(i, 1); }
     else settings.days.push(n);
+    saveSettings();
+    renderSettings();
+    renderAll();
+  });
+
+  document.getElementById("perMoveSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-per]");
+    if (!b) return;
+    settings.perMove = Number(b.dataset.per);
     saveSettings();
     renderSettings();
     renderAll();
