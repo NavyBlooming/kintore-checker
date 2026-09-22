@@ -1327,9 +1327,12 @@
       if (got >= tgt && got > 0) cls += " full";
       if (k === tdyKey) cls += " today";
       if (settings.debug && k === selDate) cls += " sel";
-      // やった日は実際のメニュー、これからの予定日は予定のメニューを出す
+      // やった日は実際のメニュー、これからの予定日は予定のメニューを出す。
+      // 済んだ日より前の予定は出さない。メニューを選び直すと並び全体がずれ、
+      // やらなかった過去の日の表示だけが後から変わってしまうため。
       var did = doneSession(k);
-      var mark = did ? SHORT[did.id] : (planned ? SHORT[sessionFor(date).id] : "");
+      var mark = did ? SHORT[did.id]
+        : (planned && k >= tdyKey ? SHORT[sessionFor(date).id] : "");
       cells.push(
         '<button class="' + cls + '" data-k="' + k + '"' + (settings.debug ? "" : " disabled") + ">" +
         d + (mark ? '<i class="mk' + (did ? "" : " plan") + '">' + mark + "</i>" : "") +
