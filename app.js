@@ -166,7 +166,7 @@
         '</div>' +
         '<div class="field">' +
           '<label>伏せたまま取り込む</label>' +
-          '<div class="pass"><input type="password" id="passInput" ' +
+          '<div class="pass"><input type="text" id="passInput" ' +
           'autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="合言葉">' +
           '<button class="act" id="passSave">保存</button></div>' +
           '<div class="note" id="passState" style="margin-top:7px"></div>' +
@@ -1259,8 +1259,12 @@
       return;
     }
     el.textContent = loadPass()
-      ? "合言葉は設定済みです。変えるときは入れ直して保存してください。"
+      ? "保存済みです。PC 側の .env と同じであることを確かめてください。"
       : "PC 側の .env に入れたものと同じ合言葉を保存してください。";
+
+    // 打っている最中に書き換えない
+    var inp = document.getElementById("passInput");
+    if (inp && document.activeElement !== inp) inp.value = loadPass();
   }
 
   function renderSettings() {
@@ -1564,9 +1568,7 @@
   });
 
   document.getElementById("passSave").addEventListener("click", function () {
-    var el = document.getElementById("passInput");
-    savePass(el.value);
-    el.value = "";
+    savePass(document.getElementById("passInput").value.trim());
     keyCache = {};
     renderPassState();
   });
