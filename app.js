@@ -113,6 +113,14 @@
           '</div>' +
         '</div>' +
         '<div class="field">' +
+          '<label>シーズン</label>' +
+          '<div id="seasonNow"></div>' +
+          '<button class="btn primary" id="startSeason" style="margin-top:9px">新しいシーズンを開始</button>' +
+          '<p class="note">押した日から新しいシーズンが始まります。' +
+          '画像・動画はシーズンごとに分かれ、前のシーズンの分は下に残ります。</p>' +
+          '<div class="seasonlist" id="seasonList"></div>' +
+        '</div>' +
+        '<div class="field">' +
           '<label>スケジュール</label>' +
           '<div class="seg" id="modeSeg"></div>' +
           '<div id="weeklyBox" style="margin-top:9px">' +
@@ -139,12 +147,19 @@
         '</div>' +
         '<button class="btn quiet" id="closeSheet">閉じる</button>' +
       '</div>' +
+    '</div>' +
+
+    '<div class="viewer" id="viewer">' +
+      '<div class="viewer-in" id="viewerIn"></div>' +
+      '<button class="btn quiet" id="closeViewer">閉じる</button>' +
     '</div>';
 
   document.getElementById("app").innerHTML = SHELL;
 
   var settings = loadSettings();
   var log = loadLog();
+  migrateSeasons();
+  var allImages = [];
   var images = [];
   var urls = {};
   var db = null;
@@ -171,7 +186,8 @@
       sets: 6,
       currentId: null,
       sampleSets: 0,
-      debug: false
+      debug: false,
+      seasons: []
     };
     try {
       var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
@@ -185,6 +201,7 @@
       if (SET_CHOICES.indexOf(s.sets) >= 0) d.sets = s.sets;
       if (typeof s.currentId === "string") d.currentId = s.currentId;
       if (typeof s.sampleSets === "number") d.sampleSets = s.sampleSets;
+      if (Array.isArray(s.seasons) && s.seasons.length) d.seasons = s.seasons;
       d.debug = !!s.debug;
     } catch (e) {}
     if (DEMO) d.debug = true;
@@ -227,6 +244,82 @@
   function today() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
   function fromKey(k) { var p = k.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
 
+  /* ---------- seasons ---------- */
+
+  // 記録は日付で持っているので、シーズンは期間として重ねる。
+  // 最後の要素が実施中で、end は締めたときに入る。
+  function migrateSeasons() {
+    if (settings.seasons.length) return;
+    var ks = Object.keys(log).sort();
+    settings.seasons = [{
+      n: 1,
+      start: ks.length ? ks[0] : key(today()),
+      end: null,
+      sets: settings.sets
+    }];
+    saveSettings();
+  }
+
+  function curSeason() { return settings.seasons[settings.seasons.length - 1]; }
+
+  function seasonSets(s) {
+    var to = s.end || key(today());
+    var n = 0;
+    for (var k in log) {
+      if (!Object.prototype.hasOwnProperty.call(log, k)) continue;
+      if (k >= s.start && k <= to) n += daySets(k);
+    }
+    return n;
+  }
+
+  function seasonTerm(s) {
+    var a = fromKey(s.start);
+    var t = (a.getMonth() + 1) + "/" + a.getDate();
+    if (!s.end) return t + " 〜";
+    var b = fromKey(s.end);
+    return t + " 〜 " + (b.getMonth() + 1) + "/" + b.getDate();
+  }
+
+  function imagesOfSeason(n) {
+    return allImages.filter(function (im) { return (im.season || 1) === n; });
+  }
+
+  function fullImagesOfSeason(s) {
+    var lim = s.sets || settings.sets;
+    return imagesOfSeason(s.n).filter(function (im) { return (im.sets || 0) >= lim; });
+  }
+
+  function syncImages() { images = imagesOfSeason(curSeason().n); }
+
+  function startSeason() {
+    var cur = curSeason();
+    var tk = key(today());
+    if (cur.start === tk) {
+      alert("シーズン" + cur.n + "は今日始まったばかりです。");
+      return;
+    }
+    var msg = "今日からシーズン" + (cur.n + 1) + "を始めます。\n\n" +
+      "いまの画像・動画はシーズン" + cur.n + "の記録として残り、" +
+      "新しいシーズンの画像はあらためて追加します。";
+    // シーズンは日付で区切るので、今日の分は新しい側に入る
+    if (daySets(tk) > 0) msg += "\n\n今日すでに記録した分は、シーズン" + (cur.n + 1) + "の記録になります。";
+    if (!confirm(msg)) return;
+
+    cur.end = key(addDays(today(), -1));
+    cur.sets = settings.sets;
+    settings.seasons.push({ n: cur.n + 1, start: tk, end: null, sets: settings.sets });
+    settings.anchor = tk;       // 隔日の起点を開始日にそろえる
+    settings.currentId = null;
+    settings.sampleSets = 0;
+    saveSettings();
+
+    syncImages();
+    lastTiles = -1;
+    delete document.getElementById("stage").dataset.im;
+    renderSettings();
+    renderAll();
+  }
+
   /* ---------- sessions ---------- */
 
   function plannedDays() { return settings.days.slice().sort(function (a, b) { return a - b; }); }
@@ -247,6 +340,7 @@
   // その日のメニュー。トレーニング日でなければ null
   function sessionFor(date) {
     var k = key(date);
+    if (k < curSeason().start) return null;   // シーズンが始まる前は予定日にしない
     if (settings.moved[k]) return sessionById(settings.moved[k]);
     if (settings.skipped[k]) return null;
 
@@ -416,15 +510,26 @@
   // 旧版は総セット数から開封状況を計算していた。素材ごとの保持へ一度だけ移す。
   function migrateSets() {
     var needs = false;
-    images.forEach(function (im) { if (typeof im.sets !== "number") needs = true; });
+    allImages.forEach(function (im) { if (typeof im.sets !== "number") needs = true; });
     if (!needs) return Promise.resolve();
     var remaining = totalSets();
-    var jobs = images.map(function (im) {
+    var jobs = allImages.map(function (im) {
       if (typeof im.sets !== "number") {
         im.sets = Math.min(remaining, settings.sets);
         remaining -= im.sets;
       }
       return tx("readwrite", function (s) { return s.put(im); });
+    });
+    return Promise.all(jobs);
+  }
+
+  // シーズンを持たない素材は、最初のシーズンのものとして扱う。
+  function migrateImageSeason() {
+    var jobs = [];
+    allImages.forEach(function (im) {
+      if (typeof im.season === "number") return;
+      im.season = 1;
+      jobs.push(tx("readwrite", function (s) { return s.put(im); }));
     });
     return Promise.all(jobs);
   }
@@ -945,7 +1050,8 @@
     var list = document.getElementById("imgList");
     if (!images.length) {
       list.innerHTML = '<p class="note" style="margin:0">' +
-        (DEMO ? "未登録です。いまはサンプル素材を表示しています。" : "まだ登録されていません。") + "</p>";
+        (DEMO ? "未登録です。いまはサンプル素材を表示しています。"
+              : "シーズン" + curSeason().n + "の画像はまだありません。") + "</p>";
       return;
     }
     var idx = currentIndex();
@@ -963,7 +1069,53 @@
     }).join("");
   }
 
+  function seasonMeta(s, now) {
+    var f = fullImagesOfSeason(s).length;
+    return '<div class="meta"><b>シーズン' + s.n + (now ? "（実施中）" : "") + "</b><span>" +
+      seasonTerm(s) + "　" + seasonSets(s) + " セット　" +
+      f + " / " + imagesOfSeason(s.n).length + " 枚開封</span></div>";
+  }
+
+  function renderSeasons() {
+    var cur = curSeason();
+    document.getElementById("seasonNow").innerHTML =
+      '<div class="season now">' + seasonMeta(cur, true) + "</div>";
+
+    var past = settings.seasons.slice(0, -1).reverse();
+    document.getElementById("seasonList").innerHTML = past.map(function (s) {
+      var f = fullImagesOfSeason(s);
+      return '<div class="season">' + seasonMeta(s, false) +
+        (f.length ? '<button class="act" data-open="' + s.n + '">開封済みを見る</button>' : "") +
+        "</div>" +
+        '<div class="seasonimgs" id="si' + s.n + '" hidden>' +
+        f.map(function (im) {
+          return '<button class="sthumb" data-view="' + im.id + '">' +
+            (im.type === "video"
+              ? "<span>動画</span>"
+              : '<img src="' + urlFor(im) + '" alt="">') + "</button>";
+        }).join("") + "</div>";
+    }).join("");
+  }
+
+  // 開封し切った素材は、ぼかさずそのまま見られる
+  function openViewer(id) {
+    var im = null;
+    for (var i = 0; i < allImages.length; i++) if (allImages[i].id === id) im = allImages[i];
+    if (!im) return;
+    document.getElementById("viewerIn").innerHTML = im.type === "video"
+      ? '<video src="' + urlFor(im) + '" controls autoplay loop playsinline></video>'
+      : '<img src="' + urlFor(im) + '" alt="">';
+    document.getElementById("viewer").classList.add("open");
+  }
+
+  function closeViewer() {
+    document.getElementById("viewer").classList.remove("open");
+    document.getElementById("viewerIn").innerHTML = "";
+  }
+
   function renderSettings() {
+    renderSeasons();
+
     var dbgField = document.getElementById("debugField");
     if (DEMO) {
       dbgField.hidden = true;
@@ -1148,6 +1300,22 @@
     renderAll();
   });
 
+  document.getElementById("startSeason").addEventListener("click", startSeason);
+
+  document.getElementById("closeViewer").addEventListener("click", closeViewer);
+
+  document.getElementById("seasonList").addEventListener("click", function (e) {
+    var o = e.target.closest("[data-open]");
+    if (o) {
+      var box = document.getElementById("si" + o.dataset.open);
+      box.hidden = !box.hidden;
+      o.textContent = box.hidden ? "開封済みを見る" : "閉じる";
+      return;
+    }
+    var v = e.target.closest("[data-view]");
+    if (v) openViewer(v.dataset.view);
+  });
+
   document.getElementById("addImage").addEventListener("click", function () {
     document.getElementById("fileInput").click();
   });
@@ -1172,14 +1340,16 @@
           mime: f.type || "",
           type: (f.type || "").indexOf("video") === 0 ? "video" : "image",
           sets: 0,
+          season: curSeason().n,
           added: Date.now()
         };
         return tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; });
       });
       return Promise.all(jobs).then(function (recs) {
-        images = images.concat(recs);
+        allImages = allImages.concat(recs);
+        syncImages();
         delete document.getElementById("stage").dataset.im;
-        renderImageList();
+        renderSettings();
         renderAll();
       });
     }).catch(function () {
@@ -1201,14 +1371,15 @@
     var id = del.dataset.del;
     if (!confirm("削除しますか。")) return;
     tx("readwrite", function (s) { return s.delete(id); }).then(function () {
-      images = images.filter(function (im) { return im.id !== id; });
+      allImages = allImages.filter(function (im) { return im.id !== id; });
+      syncImages();
       if (urls[id]) { URL.revokeObjectURL(urls[id]); delete urls[id]; }
       if (settings.currentId === id) {
         settings.currentId = images.length ? images[0].id : null;
         saveSettings();
       }
       delete document.getElementById("stage").dataset.im;
-      renderImageList();
+      renderSettings();
       renderAll();
     });
   });
@@ -1227,9 +1398,10 @@
     db = d;
     return tx("readonly", function (s) { return s.getAll(); });
   }).then(function (recs) {
-    images = (recs || []).sort(function (a, b) { return a.added - b.added; });
-    return migrateSets();
+    allImages = (recs || []).sort(function (a, b) { return a.added - b.added; });
+    return migrateSets().then(migrateImageSeason);
   }).then(function () {
+    syncImages();
     delete document.getElementById("stage").dataset.im;
     renderReveal();
   }).catch(function () {
