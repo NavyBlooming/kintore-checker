@@ -88,6 +88,9 @@
         '<div class="prog-sub" id="progSub">1セットで6マス削れます</div>' +
       '</div>' +
       '<div class="stage" id="stage"></div>' +
+      '<div class="packbar" id="packBar" hidden>' +
+        '<label for="packSel">パック</label><select id="packSel"></select>' +
+      '</div>' +
       '<div class="medianav" id="mediaNav" hidden>' +
         '<button id="prevMedia" aria-label="前へ">‹</button>' +
         '<span class="pos" id="mediaPos"></span>' +
@@ -170,10 +173,11 @@
           'autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="合言葉">' +
           '<button class="act" id="passSave">保存</button></div>' +
           '<div class="note" id="passState" style="margin-top:7px"></div>' +
-          '<button class="btn" id="addSealed" style="margin-top:9px">.kcz を取り込む</button>' +
+          '<div class="packlist" id="packList" style="margin-top:13px"></div>' +
+          '<button class="btn" id="addSealed" style="margin-top:9px">ファイルから取り込む</button>' +
           '<input type="file" id="sealedInput" multiple>' +
-          '<p class="note">PCで伏せておいたファイルを、中身を出さずに取り込みます。' +
-          '取り込むまで何が入っているかは分かりません。</p>' +
+          '<p class="note">中身を出さずに取り込みます。取り込むまで何が入っているかは分かりません。' +
+          'パックはリポジトリに置いたもの、ファイルは手元の .kcz です。</p>' +
         '</div>' +
         '<button class="btn quiet" id="closeSheet">閉じる</button>' +
       '</div>' +
@@ -217,7 +221,8 @@
       currentId: null,
       sampleSets: 0,
       debug: false,
-      seasons: []
+      seasons: [],
+      pack: null
     };
     try {
       var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
@@ -232,6 +237,7 @@
       if (typeof s.currentId === "string") d.currentId = s.currentId;
       if (typeof s.sampleSets === "number") d.sampleSets = s.sampleSets;
       if (Array.isArray(s.seasons) && s.seasons.length) d.seasons = s.seasons;
+      if (typeof s.pack === "string") d.pack = s.pack;
       d.debug = !!s.debug;
     } catch (e) {}
     if (DEMO) d.debug = true;
@@ -317,6 +323,8 @@
     return /\.kcz$/i.test(file.name || "");
   }
 
+
+
   function openSealed(file, pass) {
     if (!window.crypto || !crypto.subtle) {
       return Promise.reject(new Error("この環境では開けません（HTTPS で開いてください）"));
@@ -362,6 +370,63 @@
       }
       return step();
     });
+  }
+
+  /* ---------- 画像パック ----------
+   *
+   * リポジトリの media/index.json に、パックと中身の一覧が入っている。
+   * 中身は .kcz なので、置いてある場所が公開でも合言葉なしには開けない。
+   */
+
+  var packs = [];
+  var packsLoaded = false;
+
+  function loadPacks() {
+    // 一覧は差し替わるので、毎回取りに行く
+    return fetch("./media/index.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : { packs: [] }; })
+      .then(function (d) { packs = (d && d.packs) || []; })
+      .catch(function () { packs = []; })
+      .then(function () { packsLoaded = true; });
+  }
+
+  function packById(id) {
+    for (var i = 0; i < packs.length; i++) if (packs[i].id === id) return packs[i];
+    return null;
+  }
+
+  // すでに取り込んだものは src で見分ける。二重に入らない。
+  function importedSrc() {
+    var have = {};
+    allImages.forEach(function (im) { if (im.src) have[im.src] = 1; });
+    return have;
+  }
+
+  function packRest(p) {
+    var have = importedSrc();
+    return p.files.filter(function (f) { return !have[p.id + "/" + f]; });
+  }
+
+  function importPack(p) {
+    var pass = loadPass();
+    if (!pass) return Promise.reject(new Error("先に合言葉を保存してください。"));
+    var todo = packRest(p);
+    if (!todo.length) return Promise.resolve([]);
+
+    var recs = [];
+    // 1件ずつ順に。まとめて走らせると鍵の導出が重なって無駄が出る
+    return todo.reduce(function (chain, f) {
+      return chain.then(function () {
+        return fetch("./media/" + p.id + "/" + f).then(function (r) {
+          if (!r.ok) throw new Error("取得できませんでした（" + r.status + "）");
+          return r.blob();
+        }).then(function (b) {
+          return openSealed(b, pass);
+        }).then(function (blob) {
+          return storeMedia(blob, p.name + " " + (recs.length + 1), p.id, p.id + "/" + f);
+        }).then(function (rec) { recs.push(rec); });
+      });
+    }, Promise.resolve()).then(function () { return recs; });
   }
 
   /* ---------- dates ---------- */
@@ -416,7 +481,14 @@
     return imagesOfSeason(s.n).filter(function (im) { return (im.sets || 0) >= lim; });
   }
 
-  function syncImages() { images = imagesOfSeason(curSeason().n); }
+  // 表示と開封の対象。シーズンと、選んでいるパックで絞る
+  function syncImages() {
+    var all = imagesOfSeason(curSeason().n);
+    var sel = settings.pack;
+    images = !sel ? all : all.filter(function (im) {
+      return sel === "_manual" ? !im.pack : im.pack === sel;
+    });
+  }
 
   function startSeason() {
     var cur = curSeason();
@@ -988,7 +1060,38 @@
     document.getElementById("nextMedia").disabled = i >= images.length - 1;
   }
 
+  // 選べるまとまりが2つ以上あるときだけ出す
+  function renderPackBar() {
+    var bar = document.getElementById("packBar");
+    var sel = document.getElementById("packSel");
+    if (!bar || !sel) return;
+
+    var all = imagesOfSeason(curSeason().n);
+    var ids = [], seen = {}, manual = false;
+    all.forEach(function (im) {
+      if (!im.pack) { manual = true; return; }
+      if (!seen[im.pack]) { seen[im.pack] = 1; ids.push(im.pack); }
+    });
+    if (ids.length + (manual ? 1 : 0) < 2) { bar.hidden = true; return; }
+    bar.hidden = false;
+
+    var opts = ['<option value="">すべて（' + all.length + "）</option>"];
+    ids.forEach(function (id) {
+      var p = packById(id);
+      var n = all.filter(function (im) { return im.pack === id; }).length;
+      opts.push('<option value="' + id + '">' +
+        escapeHtml(p ? p.name : id) + "（" + n + "）</option>");
+    });
+    if (manual) {
+      var mn = all.filter(function (im) { return !im.pack; }).length;
+      opts.push('<option value="_manual">手で追加したもの（' + mn + "）</option>");
+    }
+    sel.innerHTML = opts.join("");
+    sel.value = settings.pack || "";
+  }
+
   function renderReveal() {
+    renderPackBar();
     var stage = document.getElementById("stage");
     var p = progress();
 
@@ -1267,8 +1370,34 @@
     if (inp && document.activeElement !== inp) inp.value = loadPass();
   }
 
+  function renderPacks() {
+    var box = document.getElementById("packList");
+    if (!box) return;
+    if (!packsLoaded) {
+      box.innerHTML = '<p class="note" style="margin:0">パックを調べています…</p>';
+      return;
+    }
+    if (!packs.length) {
+      box.innerHTML = '<p class="note" style="margin:0">パックはまだありません。</p>';
+      return;
+    }
+    var have = importedSrc();
+    box.innerHTML = packs.map(function (p) {
+      var got = 0;
+      p.files.forEach(function (f) { if (have[p.id + "/" + f]) got++; });
+      var rest = p.files.length - got;
+      return '<div class="season">' +
+        '<div class="meta"><b>' + escapeHtml(p.name) + "</b><span>" +
+        p.files.length + " 件　" +
+        (rest ? "未取り込み " + rest + " 件" : "取り込み済み") + "</span></div>" +
+        (rest ? '<button class="act" data-pack="' + p.id + '">取り込む</button>' : "") +
+        "</div>";
+    }).join("");
+  }
+
   function renderSettings() {
     renderSeasons();
+    renderPacks();
     renderPassState();
 
     var dbgField = document.getElementById("debugField");
@@ -1476,7 +1605,7 @@
   });
 
   // blob と名前から1件ぶん作って保存する。素通しでも伏せたものでも通り道は同じ。
-  function storeMedia(blob, name) {
+  function storeMedia(blob, name, pack, src) {
     var mime = blob.type || "";
     var rec = {
       id: String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8),
@@ -1486,6 +1615,8 @@
       type: mime.indexOf("video") === 0 ? "video" : "image",
       sets: 0,
       season: curSeason().n,
+      pack: pack || null,
+      src: src || null,
       added: Date.now()
     };
     return tx("readwrite", function (s) { return s.put(rec); }).then(function () { return rec; });
@@ -1552,7 +1683,7 @@
       return list.reduce(function (chain, f) {
         return chain.then(function () {
           return openSealed(f, pass).then(function (blob) {
-            return storeMedia(blob, "封 " + (recs.length + 1));
+            return storeMedia(blob, "封 " + (recs.length + 1), null, null);
           }).then(function (rec) { recs.push(rec); });
         });
       }, Promise.resolve()).then(function () { return recs; });
@@ -1564,6 +1695,40 @@
     }).then(function () {
       btn.disabled = false;
       btn.textContent = ".kcz を取り込む";
+    });
+  });
+
+  document.getElementById("packSel").addEventListener("change", function (e) {
+    settings.pack = e.target.value || null;
+    settings.currentId = null;
+    saveSettings();
+    syncImages();
+    lastTiles = -1;
+    delete document.getElementById("stage").dataset.im;
+    renderAll();
+    renderSettings();
+  });
+
+  document.getElementById("packList").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-pack]");
+    if (!b) return;
+    var p = packById(b.dataset.pack);
+    if (!p) return;
+
+    b.disabled = true;
+    b.textContent = "取り込み中…";
+    dbOrWarn().then(function () {
+      return importPack(p);
+    }).then(function (recs) {
+      if (!recs.length) { alert("新しいものはありませんでした。"); return; }
+      afterStore(recs);
+      alert(recs.length + " 件を取り込みました。何が入っているかは開くまで分かりません。");
+    }).catch(function (err) {
+      alert((err && err.message) || "取り込めませんでした。");
+    }).then(function () {
+      b.disabled = false;
+      b.textContent = "取り込む";
+      renderPacks();
     });
   });
 
@@ -1609,6 +1774,8 @@
 
   renderDow();
   renderAll();
+
+  loadPacks().then(function () { renderPacks(); });
 
   dbReady = openDB().then(function (d) {
     db = d;

@@ -88,6 +88,14 @@
 
   .empty { padding: 42px 18px; text-align: center; color: var(--muted); font-size: 0.87rem; }
 
+  .packbar { display: flex; align-items: center; gap: 9px; margin-top: 11px; }
+  .packbar label { font-size: 0.72rem; color: var(--muted); flex: none; }
+  .packbar select {
+    flex: 1; min-width: 0; font: inherit; font-size: 0.8rem; color: var(--text);
+    background: var(--panel-2); border: 0; border-radius: 10px; padding: 9px 10px;
+    -webkit-appearance: none; appearance: none;
+  }
+
   .medianav { display: flex; align-items: center; gap: 9px; margin-top: 11px; }
   .medianav button {
     width: 46px; height: 38px; border-radius: 10px;
