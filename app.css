@@ -185,7 +185,15 @@
     padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
     max-height: 88vh; overflow-y: auto;
   }
-  .sheet h2 { font-size: 0.93rem; margin: 0 0 16px; }
+  .sheet-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .sheet h2 { font-size: 0.93rem; margin: 0; flex: 1; }
+  .closex {
+    width: 32px; height: 32px; border-radius: 50%; flex: none;
+    background: var(--panel-2); color: var(--muted);
+    display: grid; place-items: center; font-size: 0.82rem; line-height: 1;
+  }
+  .closex:active { background: var(--line); color: var(--text); }
+  .ver { text-align: center; margin: 4px 0 0; opacity: 0.7; }
   .field { margin-bottom: 22px; }
   .field > label { display: block; font-size: 0.76rem; color: var(--muted); margin-bottom: 8px; }
 

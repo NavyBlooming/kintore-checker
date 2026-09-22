@@ -127,7 +127,10 @@
 
     '<div class="sheet-bg" id="sheetBg">' +
       '<div class="sheet" role="dialog" aria-label="設定">' +
-        '<h2>設定</h2>' +
+        '<div class="sheet-head">' +
+          '<h2>設定</h2>' +
+          '<button class="closex" id="closeSheet" aria-label="閉じる">✕</button>' +
+        '</div>' +
         '<div class="field" id="debugField">' +
           '<div class="toggle">' +
             '<div class="lab">デバッグモード<small>任意の日・任意のメニューのセットを自由に増減できます。通常は切っておいてください。</small></div>' +
@@ -179,7 +182,7 @@
           '<p class="note">中身を出さずに取り込みます。取り込むまで何が入っているかは分かりません。' +
           'パックはリポジトリに置いたもの、ファイルは手元の .kcz です。</p>' +
         '</div>' +
-        '<button class="btn quiet" id="closeSheet">閉じる</button>' +
+        '<p class="note ver" id="verNote"></p>' +
       '</div>' +
     '</div>' +
 
@@ -204,6 +207,19 @@
   var viewYear, viewMonth;
 
   var sampleTpl = document.getElementById("sampleArt");
+
+  // どの版が動いているか。古いものが残っているときの切り分けに要る。
+  var VERSION = (function () {
+    try {
+      var el = document.currentScript;
+      if (!el) {
+        var all = document.querySelectorAll('script[src*="app.js"]');
+        el = all[all.length - 1];
+      }
+      var m = el && /[?&]v=([^&]+)/.exec(el.getAttribute("src") || "");
+      return m ? m[1] : "?";
+    } catch (e) { return "?"; }
+  })();
 
   /* ---------- storage ---------- */
 
@@ -1396,6 +1412,7 @@
   }
 
   function renderSettings() {
+    document.getElementById("verNote").textContent = "版 " + VERSION;
     renderSeasons();
     renderPacks();
     renderPassState();
