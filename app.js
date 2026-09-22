@@ -613,9 +613,14 @@
     x.globalCompositeOperation = "source-over";
   }
 
+  // 削る演出を止める。止め忘れると、残ったコマが次の素材の上に描き続ける
+  function stopScratch() {
+    if (scratchRAF) { cancelAnimationFrame(scratchRAF); scratchRAF = 0; }
+  }
+
   // from/to は開いた区画の数。1区画ずつ順に削る
   function scratchTo(stage, mediaId, from, to) {
-    if (scratchRAF) { cancelAnimationFrame(scratchRAF); scratchRAF = 0; }
+    stopScratch();
     var w = stage.clientWidth, h = stage.clientHeight;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce || !w || !h) { paintCover(stage, mediaId, to, null); clearFx(stage); return; }
@@ -633,6 +638,8 @@
     var t0 = performance.now();
 
     function frame(now) {
+      // 途中で素材が切り替わったら、この素材の続きは描かない
+      if (stage.dataset.im !== mediaId) { scratchRAF = 0; return; }
       // rAF が渡す時刻は直前の performance.now() より前になることがある。
       // そのまま計算すると経過時間が負になり、区画番号が -1 に落ちる。
       var el = Math.max(0, Math.min(span, now - t0));
@@ -781,7 +788,7 @@
 
     // 進んだときだけ、区画を削る演出を走らせる
     if (lastTiles >= 0 && p.tiles > lastTiles) scratchTo(stage, m.id, lastTiles, p.tiles);
-    else { paintCover(stage, m.id, p.tiles, null); clearFx(stage); }
+    else { stopScratch(); paintCover(stage, m.id, p.tiles, null); clearFx(stage); }
     lastTiles = p.tiles;
 
     var rest = 0;
