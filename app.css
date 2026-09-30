@@ -56,7 +56,7 @@
   .prog { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
   .prog-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.3rem; }
   .prog-n small { font-weight: 400; font-size: 0.78rem; color: var(--muted); margin-left: 3px; }
-  .prog-sub { font-size: 0.76rem; color: var(--muted); text-align: right; }
+  .prog-sub { flex: 1; font-size: 0.76rem; color: var(--muted); text-align: right; }
 
   .stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--panel-2); }
   .stage img, .stage video { display: block; width: 100%; height: auto; }
@@ -79,6 +79,24 @@
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
   .stage canvas.fxlayer { width: 100%; height: 100%; display: block; }
+
+  .done-banner { transition: opacity 0.8s ease; }
+  .done-banner.gone { opacity: 0; pointer-events: none; }
+
+  /* 隠しているとき。中身は残したまま畳む。開封は裏で進む */
+  .stage.masked { min-height: 64px; }
+  .stage.masked > * { display: none !important; }
+  .stage.masked::after {
+    content: "非表示中　セットを終えると裏で開きます";
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 0.76rem; color: var(--muted);
+  }
+
+  .eye {
+    flex: none; font-size: 0.72rem; color: var(--muted);
+    background: var(--panel-2); border-radius: 8px; padding: 4px 9px;
+  }
+  .eye:active { background: var(--line); }
 
   .done-banner {
     position: absolute; left: 0; right: 0; bottom: 0;

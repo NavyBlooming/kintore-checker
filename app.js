@@ -89,6 +89,7 @@
       '<div class="prog">' +
         '<div class="prog-n" id="progN">0<small>/ 6 セット</small></div>' +
         '<div class="prog-sub" id="progSub">1セットで6マス削れます</div>' +
+        '<button class="eye" id="hideBtn">隠す</button>' +
       '</div>' +
       '<div class="stage" id="stage"></div>' +
       '<div class="packbar" id="packBar" hidden>' +
@@ -249,7 +250,8 @@
       debug: false,
       seasons: [],
       pack: null,
-      rot: 0
+      rot: 0,
+      hide: false
     };
     try {
       var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
@@ -267,6 +269,7 @@
       if (Array.isArray(s.seasons) && s.seasons.length) d.seasons = s.seasons;
       if (typeof s.pack === "string") d.pack = s.pack;
       if (typeof s.rot === "number") d.rot = ((s.rot % 3) + 3) % 3;
+      d.hide = !!s.hide;
       d.debug = !!s.debug;
     } catch (e) {}
     if (DEMO) d.debug = true;
@@ -571,20 +574,28 @@
     if (k < curSeason().start) return null;   // シーズンが始まる前は予定日にしない
     if (settings.moved[k]) return sessionById(settings.moved[k]);
     if (settings.skipped[k]) return null;
+    var idx = baseIndex(date);
+    return idx === null ? null : SESSIONS[rotate(idx)];
+  }
 
-    var idx;
+  // 繰り上げなどを抜きにした、並びの上での位置。予定日でなければ null
+  function baseIndex(date) {
     if (settings.mode === "interval") {
       var n = dayDiff(settings.anchor, date);
       var iv = settings.interval;
       if (((n % iv) + iv) % iv !== 0) return null;
-      idx = Math.floor(n / iv);
-    } else {
-      var days = plannedDays();
-      idx = days.indexOf(date.getDay());
-      if (idx < 0) return null;
+      return Math.floor(n / iv);
     }
-    return SESSIONS[rotate(idx)];
+    var idx = plannedDays().indexOf(date.getDay());
+    return idx < 0 ? null : idx;
   }
+
+  function sessIndex(id) {
+    for (var i = 0; i < SESSIONS.length; i++) if (SESSIONS[i].id === id) return i;
+    return 0;
+  }
+
+  function mod3(n) { return ((n % 3) + 3) % 3; }
 
   // 胸 → 脚 → 背中 の並びを、settings.rot だけずらす。
   // 今日のメニューを選び直すと、以降もその順で続く。
@@ -597,12 +608,24 @@
   function pickSession(date, sessId) {
     var cur = sessionFor(date);
     if (!cur || cur.id === sessId) return;
-    var from = 0, to = 0, i;
-    for (i = 0; i < SESSIONS.length; i++) {
-      if (SESSIONS[i].id === cur.id) from = i;
-      if (SESSIONS[i].id === sessId) to = i;
+    var to = sessIndex(sessId);
+    var k = key(date);
+
+    if (settings.moved[k]) {
+      // 曜日で決めるときの繰り上げは、その日だけの指定で並びの外にいる。
+      // 回転では動かないので指定を書き換え、次の予定日が続きになるよう並びを合わせる。
+      settings.moved[k] = sessId;
+      for (var i = 1; i <= 14; i++) {
+        var d = addDays(date, i), dk = key(d);
+        if (settings.moved[dk] || settings.skipped[dk]) continue;
+        var b = baseIndex(d);
+        if (b === null) continue;
+        settings.rot = mod3(to + 1 - b);
+        break;
+      }
+    } else {
+      settings.rot = mod3(settings.rot + to - sessIndex(cur.id));
     }
-    settings.rot = (((settings.rot + to - from) % 3) + 3) % 3;
     saveSettings();
   }
 
@@ -1004,7 +1027,7 @@
     stopScratch();
     var w = stage.clientWidth, h = stage.clientHeight;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || !w || !h) { applyCover(stage, mediaId, to, null); clearFx(stage); return; }
+    if (reduce || settings.hide || !w || !h) { applyCover(stage, mediaId, to, null); clearFx(stage); return; }
 
     var total = settings.sets * TILES_PER_SET;
     var cols = gridOf(total, w, h), rows = total / cols;
@@ -1152,8 +1175,21 @@
     sel.value = settings.pack || "";
   }
 
+  // 隠している間も開封は裏で進む。動画は止めておく
+  function applyHide() {
+    var stage = document.getElementById("stage");
+    stage.classList.toggle("masked", !!settings.hide);
+    document.getElementById("hideBtn").textContent = settings.hide ? "表示する" : "隠す";
+    var vs = stage.querySelectorAll("video");
+    for (var i = 0; i < vs.length; i++) {
+      if (settings.hide) vs[i].pause();
+      else vs[i].play().catch(function () {});
+    }
+  }
+
   function renderReveal() {
     renderPackBar();
+    applyHide();
     var stage = document.getElementById("stage");
     var p = progress();
 
@@ -1179,7 +1215,7 @@
       // ぼかす側と鮮明な側の2枚があるので、どちらも動かす
       var vs = stage.querySelectorAll("video");
       for (var vi = 0; vi < vs.length; vi++) {
-        vs[vi].play().catch(function () {});
+        if (!settings.hide) vs[vi].play().catch(function () {});
         // 動画は読み込み前の高さが 150px。実寸が分かった時点で覆いを組み直す
         vs[vi].addEventListener("loadedmetadata", repaintCover);
         vs[vi].addEventListener("loadeddata", repaintCover);
@@ -1205,6 +1241,9 @@
         banner = document.createElement("div");
         banner.className = "done-banner";
         stage.appendChild(banner);
+        // 絵にかぶるので、読める間だけ出して消す
+        var shown = banner;
+        setTimeout(function () { shown.classList.add("gone"); }, 3500);
       }
       banner.textContent = (!m.rec || rest === 0)
         ? "開ききりました。設定から追加できます"
@@ -1561,7 +1600,49 @@
     var d = Number(b.dataset.d);
     if (d > 0 && !settings.debug && setsOn(k, moveId) >= settings.perMove) return;
     addSet(k, moveId, d);
-    applySetDelta(d).then(renderAll, renderAll);
+    var before = progress();
+    function done() {
+      renderAll();
+      if (d <= 0) return;
+      var after = progress();
+      if (after.idx !== before.idx) scrollToTiles(0, after.tiles);
+      else if (after.tiles > before.tiles) scrollToTiles(before.tiles, after.tiles);
+    }
+    applySetDelta(d).then(done, done);
+  });
+
+  // 開いたばかりの区画が画面に入るところまで戻す。隠しているときは動かさない
+  function scrollToTiles(from, to) {
+    if (settings.hide) return;
+    var stage = document.getElementById("stage");
+    if (!stage || !stage.dataset.im) return;
+    var w = stage.clientWidth, h = stage.clientHeight;
+    var r = stage.getBoundingClientRect();
+    var top = r.top, bottom = r.bottom;
+    var total = settings.sets * TILES_PER_SET;
+    if (w && h && to > from) {
+      var cols = gridOf(total, w, h), rows = total / cols;
+      var ord = order(stage.dataset.im, total);
+      top = Infinity; bottom = -Infinity;
+      for (var i = from; i < Math.min(to, total); i++) {
+        var t = tileRect(ord[i], cols, rows, w, h);
+        top = Math.min(top, r.top + t.y);
+        bottom = Math.max(bottom, r.top + t.y + t.h);
+      }
+    }
+    var vh = window.innerHeight;
+    // 散らばった区画がまとめて入るなら真ん中に、入らなければ上端をそろえる
+    var y = bottom - top > vh - 40
+      ? window.scrollY + top - 20
+      : window.scrollY + (top + bottom) / 2 - vh / 2;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }
+
+  document.getElementById("hideBtn").addEventListener("click", function () {
+    settings.hide = !settings.hide;
+    saveSettings();
+    applyHide();
+    repaintCover();
   });
 
   document.getElementById("prevMedia").addEventListener("click", function () {
