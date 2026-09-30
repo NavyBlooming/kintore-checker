@@ -239,6 +239,8 @@
   .btn:active { filter: brightness(1.15); }
 
   .imglist { display: flex; flex-direction: column; gap: 7px; }
+  .imggroup { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+  .imggroup:first-child { margin-top: 0; }
   .imgrow { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border-radius: 10px; padding: 7px 9px; }
   .imgrow .thumb { width: 40px; height: 40px; border-radius: 6px; background: var(--line); object-fit: cover; flex: none; filter: blur(7px); }
   .imgrow .meta { flex: 1; min-width: 0; font-size: 0.78rem; }

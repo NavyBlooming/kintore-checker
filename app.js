@@ -1407,27 +1407,45 @@
     });
   }
 
+  // 画面下のパック選びとは切り離し、このシーズンのものを全部、パックごとに並べる
   function renderImageList() {
     var list = document.getElementById("imgList");
-    if (!images.length) {
+    var all = imagesOfSeason(curSeason().n);
+    if (!all.length) {
       list.innerHTML = '<p class="note" style="margin:0">' +
         (DEMO ? "未登録です。いまはサンプル素材を表示しています。"
               : "シーズン" + curSeason().n + "の画像はまだありません。") + "</p>";
       return;
     }
-    var idx = currentIndex();
-    list.innerHTML = images.map(function (im, i) {
+    var cur = images[currentIndex()];
+    var groups = [], byGroup = {};
+    all.forEach(function (im) {
+      var g = im.pack || "_manual";
+      if (!byGroup[g]) { byGroup[g] = []; groups.push(g); }
+      byGroup[g].push(im);
+    });
+
+    list.innerHTML = groups.map(function (g) {
+      var p = g === "_manual" ? null : packById(g);
+      var title = g === "_manual" ? "手で追加したもの" : (p ? p.name : g);
+      return (groups.length > 1
+        ? '<div class="imggroup">' + escapeHtml(title) + "（" + byGroup[g].length + "）</div>"
+        : "") + byGroup[g].map(imageRow).join("");
+    }).join("");
+
+    function imageRow(im) {
+      var on = !!cur && im.id === cur.id;
       var n = setsOf(im);
       var st = (isFull(im) ? "開封済み" : n > 0 ? "途中 " + n + " / " + settings.sets : "未開封") +
-        (i === idx ? "・表示中" : "");
-      return '<div class="imgrow' + (i === idx ? " active" : "") + '">' +
+        (on ? "・表示中" : "");
+      return '<div class="imgrow' + (on ? " active" : "") + '">' +
         (im.type === "video"
           ? '<div class="thumb" style="filter:none;display:grid;place-items:center;font-size:0.62rem;color:var(--muted)">動画</div>'
           : '<img class="thumb" src="' + urlFor(im) + '" alt="">') +
         '<div class="meta"><b>' + escapeHtml(im.name) + "</b><span>" + st + "</span></div>" +
         '<button class="act" data-use="' + im.id + '">表示</button>' +
         '<button class="act del" data-del="' + im.id + '">削除</button></div>';
-    }).join("");
+    }
   }
 
   function seasonMeta(s, now) {
@@ -1707,7 +1725,7 @@
     sheetBg.classList.add("open");
     // パックは後から増える。開くたびに取りに行かないと、
     // アプリを閉じるまで新しいパックが出てこない。
-    loadPacks().then(renderPacks);
+    loadPacks().then(function () { renderPacks(); renderImageList(); });
   });
   document.getElementById("closeSheet").addEventListener("click", function () {
     sheetBg.classList.remove("open");
@@ -1932,8 +1950,15 @@
   document.getElementById("imgList").addEventListener("click", function (e) {
     var use = e.target.closest("[data-use]");
     if (use) {
+      // 絞り込み中のパックに入っていなければ、その画像のパックへ切り替える
+      var im = null;
+      allImages.forEach(function (x) { if (x.id === use.dataset.use) im = x; });
+      if (im && settings.pack && settings.pack !== (im.pack || "_manual")) {
+        settings.pack = im.pack || "_manual";
+      }
       settings.currentId = use.dataset.use;
       saveSettings();
+      syncImages();
       renderImageList();
       renderAll();
       return;
