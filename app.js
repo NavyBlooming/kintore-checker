@@ -236,7 +236,7 @@
   function loadSettings() {
     var t = new Date();
     var d = {
-      mode: "weekly",
+      mode: "interval",
       days: [1, 3, 5],
       interval: 2,
       anchor: t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()),
