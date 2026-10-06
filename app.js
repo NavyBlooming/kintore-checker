@@ -1271,6 +1271,14 @@
     }
   }
 
+  function playStageVideos() {
+    if (settings.hide) return;
+    var vs = document.getElementById("stage").querySelectorAll("video");
+    for (var i = 0; i < vs.length; i++) {
+      if (vs[i].paused) vs[i].play().catch(function () {});
+    }
+  }
+
   function renderReveal() {
     renderPackBar();
     applyHide();
@@ -1303,6 +1311,8 @@
         // 動画は読み込み前の高さが 150px。実寸が分かった時点で覆いを組み直す
         vs[vi].addEventListener("loadedmetadata", repaintCover);
         vs[vi].addEventListener("loadeddata", repaintCover);
+        // 自動再生を止められたとき、再生ボタンで動くのは押した1本だけ。もう1本も合わせて動かす
+        vs[vi].addEventListener("play", playStageVideos);
       }
       var ims = stage.querySelectorAll("img.art");
       for (var ii = 0; ii < ims.length; ii++) {
@@ -1842,6 +1852,10 @@
       : window.scrollY + (top + bottom) / 2 - vh / 2;
     window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
   }
+
+  // 低電力モードなどでは、触った直後でないと再生が許されない。どこかに触れたら動かす
+  document.addEventListener("touchend", playStageVideos, true);
+  document.addEventListener("click", playStageVideos, true);
 
   document.getElementById("hideBtn").addEventListener("click", function () {
     settings.hide = !settings.hide;
