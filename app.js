@@ -24,6 +24,7 @@
   var LS_SETTINGS = "wt.settings.v3" + SUFFIX;
   var LS_LOG = "wt.log.v3" + SUFFIX;
   var LS_PASS = "wt.pass.v1" + SUFFIX;
+  var LS_PLAN = "wt.plan.v1" + SUFFIX;
   var DB_NAME = DEMO ? "workout-tracker-demo" : "workout-tracker";
 
   // やり方の動画。ザ・きんにくTV の解説動画が種目に対応するものは直接、
@@ -111,6 +112,67 @@
       '<div id="moves"></div>' +
     '</section>' +
 
+    '<section class="card" id="planCard">' +
+      '<div class="plan-head">' +
+        '<div><div class="plan-day" id="planDay">—</div><div class="plan-date" id="planDate"></div></div>' +
+        '<span class="phase-pill" id="planPhase"></span>' +
+      '</div>' +
+      '<div class="plan-bar"><i id="planFill"></i></div>' +
+      '<p class="note" id="planDesc" style="margin:0"></p>' +
+      '<div class="plan-tasks" id="planTasks"></div>' +
+      '<details class="plan-guide"><summary>毎日の基本リズム</summary>' +
+        '<div class="plan-rows">' +
+          '<b>9:30</b><span>起床。カーテンを開けて朝の光を浴び、水分をとる<small>朝食は食べられる日だけで大丈夫</small></span>' +
+          '<b>10:00</b><span>仕事開始</span>' +
+          '<b>12:00</b><span>昼食・休憩（〜13:00）</span>' +
+          '<b>午後</b><span>眠気が強い日は昼寝20〜30分まで<small>夕方以降の昼寝は避ける</small></span>' +
+          '<b>19:00</b><span>仕事終了の目安</span>' +
+          '<b>仕事後</b><span>散歩または筋トレ。そのあと補食</span>' +
+          '<b>19:30</b><span>夕食（〜20:30）</span>' +
+          '<b>20:30</b><span>自由時間。ゲームもOK</span>' +
+          '<b>22:30</b><span>必要なら軽い補食</span>' +
+          '<b>0:30</b><span>ゲーム終了・入浴・歯みがき（〜1:00）</span>' +
+          '<b>1:00</b><span>就寝（〜1:30）</span>' +
+        '</div>' +
+        '<p>睡眠は7.5〜8.5時間が目安です。毎日だいたい同じ時刻に起きることを大切にします。' +
+        '午前中の眠気が強いときは、9:15起床を試してみてください。眠い日はゲームを切り上げて早めに寝ましょう。</p>' +
+      '</details>' +
+      '<details class="plan-guide"><summary>食事の目安</summary>' +
+        '<ul>' +
+          '<li>昼食：ご飯200〜250g＋肉か魚150gくらい＋野菜・汁物。親子丼、牛丼、生姜焼き定食、鮭定食など</li>' +
+          '<li>午後の補食：おにぎり、バナナ＋お腹に合うヨーグルト、パン＋チーズ、カステラなど</li>' +
+          '<li>夕食：ご飯200〜250g＋肉か魚150〜200g＋野菜・副菜・汁物</li>' +
+          '<li>夜の補食：余裕がある日だけ。小さなおにぎり、パン＋チーズ、バナナ、プリンなど</li>' +
+        '</ul>' +
+        '<p>朝食は無理に食べなくて大丈夫です。ご飯は炊いたあとの重さ。乳製品でお腹をこわすときは使いません。' +
+        'タンパク質は1日65〜80gが目安で、豚・牛・鶏もも・鮭・サバ・卵なども使います。' +
+        '体重は週2〜3回、同じ条件で測り、まずは減らさないことを優先します。</p>' +
+      '</details>' +
+      '<details class="plan-guide"><summary>フェーズごとの進め方</summary>' +
+        '<p><b class="ph1t">フェーズ1 生活リズム（1〜28日目）</b><br>' +
+        '睡眠と食事を最優先にします。平日は散歩20〜30分、つらい日は5〜10分でOK。' +
+        '土曜は無理のない短い外出、日曜は休養と近所でランチくらい。</p>' +
+        '<p><b class="ph2t">フェーズ2 基礎体力（29〜56日目）</b><br>' +
+        '火・水・金に散歩20〜30分。土曜は12〜17時を目安に外出、日曜はランチと1時間ほどの買い物。</p>' +
+        '<p><b class="ph3t">フェーズ3 2日連続の外出（57〜91日目）</b><br>' +
+        '平日はフェーズ2と同じです。週末の外出を少しずつ延ばし、最後は土曜11〜18時・日曜11〜17時を目安にします。</p>' +
+        '<p>外出の時間は、移動・食事・休憩を含めた目安です。翌日まで疲れが残ったら、次は短くします。' +
+        '筋トレは上のメニューを、いつもの日程で続けます。</p>' +
+      '</details>' +
+      '<details class="plan-guide"><summary>体調がよくないときは</summary>' +
+        '<p>疲れが翌日まで強く残る日は、予定を短くするか休んでください。カレンダーどおりに進めなくて大丈夫です。</p>' +
+        '<p>次のような状態が続くときは、運動より先に内科・消化器内科・睡眠外来で相談してください。計画が終わるまで待たなくて大丈夫です。</p>' +
+        '<ul>' +
+          '<li>7.5〜8.5時間眠っても、仕事中に眠ってしまうほど眠い</li>' +
+          '<li>半日の外出だけで、ひどく消耗する</li>' +
+          '<li>体重が減る、食べているのに増えない</li>' +
+          '<li>くり返す下痢、血便、強い腹痛、夜中に下痢で起きる</li>' +
+          '<li>動悸、息切れ、失神、急な体重減少</li>' +
+          '<li>大きないびきや呼吸が止まる、朝起きても疲れが取れない</li>' +
+        '</ul>' +
+      '</details>' +
+    '</section>' +
+
     '<section class="card">' +
       '<div class="cal-head">' +
         '<div class="cal-title" id="calTitle">—</div>' +
@@ -127,6 +189,12 @@
         '<span><i class="swatch" style="background:#2f5a4c"></i>途中</span>' +
         '<span><i class="swatch" style="background:var(--accent)"></i>全セット完了</span>' +
         '<span>胸・脚・背 はその日のメニュー</span>' +
+      '</div>' +
+      '<div class="legend">' +
+        '<span><i class="swatch" style="background:var(--ph1)"></i>フェーズ1</span>' +
+        '<span><i class="swatch" style="background:var(--ph2)"></i>フェーズ2</span>' +
+        '<span><i class="swatch" style="background:var(--ph3)"></i>フェーズ3</span>' +
+        '<span>下線は体力づくりの期間・点はチェックした日</span>' +
       '</div>' +
     '</section>' +
 
@@ -161,6 +229,11 @@
             '<div class="seg" id="intervalSeg"></div>' +
             '<p class="note" id="anchorNote" style="margin-top:8px"></p>' +
           '</div>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>体力づくりの開始日</label>' +
+          '<input type="date" class="dateinput" id="planStartInput">' +
+          '<p class="note" style="margin-top:8px">この日から91日間を、3つのフェーズに分けて組み直します。チェックは日付ごとに残ります。</p>' +
         '</div>' +
         '<div class="field">' +
           '<label>1種目あたりのセット数</label>' +
@@ -205,6 +278,7 @@
 
   var settings = loadSettings();
   var log = loadLog();
+  var planChecks = loadPlanChecks();
   migrateSeasons();
   var allImages = [];
   var images = [];
@@ -214,6 +288,7 @@
   var lastTiles = -1;
   var selDate = null;
   var selSession = null;
+  var planSel = null;
   var viewYear, viewMonth;
 
   var sampleTpl = document.getElementById("sampleArt");
@@ -251,7 +326,8 @@
       seasons: [],
       pack: null,
       rot: 0,
-      hide: false
+      hide: false,
+      planStart: "2026-10-02"
     };
     try {
       var s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
@@ -270,6 +346,7 @@
       if (typeof s.pack === "string") d.pack = s.pack;
       if (typeof s.rot === "number") d.rot = ((s.rot % 3) + 3) % 3;
       d.hide = !!s.hide;
+      if (typeof s.planStart === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.planStart)) d.planStart = s.planStart;
       d.debug = !!s.debug;
     } catch (e) {}
     if (DEMO) d.debug = true;
@@ -291,6 +368,13 @@
       if (v) localStorage.setItem(LS_PASS, v);
       else localStorage.removeItem(LS_PASS);
     } catch (e) {}
+  }
+
+  function loadPlanChecks() {
+    try { return JSON.parse(localStorage.getItem(LS_PLAN) || "{}") || {}; } catch (e) { return {}; }
+  }
+  function savePlanChecks() {
+    try { localStorage.setItem(LS_PLAN, JSON.stringify(planChecks)); } catch (e) {}
   }
 
   function saveLog() {
@@ -1354,6 +1438,104 @@
     }
   }
 
+  /* ---------- 体力づくりプラン ----------
+   *
+   * 開始日から91日を3つのフェーズに分け、日ごとに睡眠・食事・休養・散歩・外出を割り当てる。
+   * 筋トレは上のメニューで記録するので、ここには出さない。
+   */
+
+  var PLAN_DAYS = 91;
+  var PHASES = [
+    { name: "生活リズム", desc: "睡眠・2食＋補食・散歩を整える時期です。" },
+    { name: "基礎体力", desc: "散歩と筋トレを続けて、体を動かすことに慣れる時期です。" },
+    { name: "2日連続の外出", desc: "週末の外出を、体調に合わせて少しずつ延ばす時期です。" }
+  ];
+
+  function planDayIndex(date) { return dayDiff(settings.planStart, date); }
+  function planPhase(date) {
+    var n = planDayIndex(date);
+    return n < 0 || n >= PLAN_DAYS ? -1 : n < 28 ? 0 : n < 56 ? 1 : 2;
+  }
+
+  function planTasks(date) {
+    var n = planDayIndex(date), p = planPhase(date), w = date.getDay();
+    if (p < 0) return [];
+    var list = [
+      { id: "sleep", title: "睡眠を優先する", detail: "1:00〜1:30に寝て、9:30に起きる。7.5〜8.5時間が目安。眠い日は早めに寝てOK。" },
+      { id: "food", title: "昼・夕の2食＋補食", detail: "朝食は無理しない。午後か夜に補食を1〜2回。" },
+      { id: "rest", title: "体調に合わせて休む", detail: "昼寝は20〜30分まで。強い眠気や疲れはがまんしない。" }
+    ];
+    var weekend = w === 0 || w === 6;
+    if (p === 0) {
+      if (!weekend) {
+        list.push({ id: "walk", title: "散歩 20〜30分", detail: "話せるくらいの速さで。つらい日は5〜10分でOK。" });
+      } else {
+        list.push({ id: "outing", title: w === 6 ? "無理のない短い外出" : "休養＋近所でランチ",
+          detail: "最初は生活リズムが優先。疲れが強い日は休みましょう。" });
+      }
+      return list;
+    }
+    if (w === 2 || w === 3 || w === 5) {
+      list.push({ id: "walk", title: "散歩 20〜30分", detail: "息が上がりすぎない速さで。体調に合わせて短くしてOK。" });
+    } else if (weekend) {
+      var title;
+      if (p === 1) {
+        title = w === 6 ? "外出の目安：12〜17時" : "ランチ＋軽い買い物 1時間くらい";
+      } else {
+        var wk = Math.min(3, Math.floor((n - 56) / 7));
+        title = "外出の目安：" + (w === 6
+          ? ["12〜17時", "12〜17時", "11〜17時", "11〜18時"][wk]
+          : ["ランチくらい", "ランチ＋買い物1〜2時間", "12〜16時", "11〜17時"][wk]);
+      }
+      list.push({ id: "outing", title: title, detail: "移動・食事・休憩を含めた目安。翌日まで疲れが残ったら、次は短く。" });
+    }
+    return list;
+  }
+
+  function planChecked(k) {
+    var r = planChecks[k];
+    if (!r) return false;
+    for (var id in r) if (r[id] === true) return true;
+    return false;
+  }
+
+  function renderPlan() {
+    var t = today();
+    var date = planSel ? fromKey(planSel) : t;
+    var k = key(date);
+    var n = planDayIndex(date);
+    var p = planPhase(date);
+    var isToday = k === key(t);
+
+    document.getElementById("planDate").textContent =
+      (isToday ? "今日 · " : "") + (date.getMonth() + 1) + "月" + date.getDate() + "日（" + DOW[date.getDay()] + "）";
+    var pill = document.getElementById("planPhase");
+    pill.className = "phase-pill" + (p >= 0 ? " p" + (p + 1) : "");
+    pill.textContent = p >= 0 ? "フェーズ" + (p + 1) + " " + PHASES[p].name : "期間外";
+
+    var fill = document.getElementById("planFill");
+    if (p >= 0) {
+      document.getElementById("planDay").textContent = "体力づくり " + (n + 1) + "日目 / " + PLAN_DAYS + "日";
+      document.getElementById("planDesc").textContent = PHASES[p].desc;
+    } else {
+      document.getElementById("planDay").textContent = n < 0
+        ? "体力づくりの開始まで " + (-n) + "日" : "91日間の予定が終わりました";
+      document.getElementById("planDesc").textContent = n < 0
+        ? "開始日までは、無理のないペースで。開始日は設定で変えられます。"
+        : "体調と生活の変化をふり返って、これからのペースを決めましょう。";
+    }
+    fill.style.width = Math.max(0, Math.min(100, Math.round((n + 1) / PLAN_DAYS * 100))) + "%";
+    fill.style.background = "var(--ph" + (p >= 0 ? p + 1 : 1) + ")";
+
+    var rec = planChecks[k] || {};
+    document.getElementById("planTasks").innerHTML = planTasks(date).map(function (task) {
+      var on = rec[task.id] === true;
+      return '<label class="ptask' + (on ? " done" : "") + '">' +
+        '<input type="checkbox" data-pt="' + task.id + '"' + (on ? " checked" : "") + ">" +
+        "<span><b>" + task.title + "</b><small>" + task.detail + "</small></span></label>";
+    }).join("");
+  }
+
   /* ---------- calendar ---------- */
 
   function renderDow() {
@@ -1383,7 +1565,10 @@
       if (got > 0 && got < tgt) cls += " part";
       if (got >= tgt && got > 0) cls += " full";
       if (k === tdyKey) cls += " today";
-      if (settings.debug && k === selDate) cls += " sel";
+      if (k === (settings.debug ? selDate : planSel)) cls += " sel";
+      var ph = planPhase(date);
+      if (ph >= 0) cls += " ph" + (ph + 1);
+      if (planChecked(k)) cls += " pc";
       // やった日は実際のメニュー、これからの予定日は予定のメニューを出す。
       // 済んだ日より前の予定は出さない。メニューを選び直すと並び全体がずれ、
       // やらなかった過去の日の表示だけが後から変わってしまうため。
@@ -1391,7 +1576,7 @@
       var mark = did ? SHORT[did.id]
         : (planned && k >= tdyKey ? SHORT[sessionFor(date).id] : "");
       cells.push(
-        '<button class="' + cls + '" data-k="' + k + '"' + (settings.debug ? "" : " disabled") + ">" +
+        '<button class="' + cls + '" data-k="' + k + '">' +
         d + (mark ? '<i class="mk' + (did ? "" : " plan") + '">' + mark + "</i>" : "") +
         "</button>"
       );
@@ -1534,6 +1719,7 @@
   }
 
   function renderSettings() {
+    document.getElementById("planStartInput").value = settings.planStart;
     document.getElementById("verNote").textContent = "版 " + VERSION;
     renderSeasons();
     renderPacks();
@@ -1599,6 +1785,7 @@
     flag.textContent = DEMO ? "DEMO" : "DEBUG";
     renderReveal();
     renderSession();
+    renderPlan();
     renderCalendar();
   }
 
@@ -1697,9 +1884,36 @@
   document.getElementById("calGrid").addEventListener("click", function (e) {
     var b = e.target.closest(".day");
     if (!b || b.disabled || !b.dataset.k) return;
-    selDate = b.dataset.k;
-    var s = sessionFor(fromKey(selDate));
-    if (s) selSession = s.id;
+    planSel = b.dataset.k === key(today()) ? null : b.dataset.k;
+    if (settings.debug) {
+      selDate = b.dataset.k;
+      var s = sessionFor(fromKey(selDate));
+      if (s) selSession = s.id;
+      renderAll();
+      return;
+    }
+    // ふだんは、その日の体力づくりの内容を見るだけ。筋トレのメニューは今日のまま
+    renderCalendar();
+    renderPlan();
+    document.getElementById("planCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  document.getElementById("planTasks").addEventListener("change", function (e) {
+    var c = e.target.closest("[data-pt]");
+    if (!c) return;
+    var k = planSel || key(today());
+    if (!planChecks[k]) planChecks[k] = {};
+    planChecks[k][c.dataset.pt] = c.checked;
+    savePlanChecks();
+    c.closest(".ptask").classList.toggle("done", c.checked);
+    renderCalendar();
+  });
+
+  document.getElementById("planStartInput").addEventListener("change", function (e) {
+    var v = e.target.value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+    settings.planStart = v;
+    saveSettings();
     renderAll();
   });
 

@@ -9,6 +9,9 @@
     --accent-ink: #0d1512;
     --warn: #e3b341;
     --danger: #e0645a;
+    --ph1: #ef8fb4;
+    --ph2: #6ec6ec;
+    --ph3: #b79af2;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -161,6 +164,38 @@
   .rest { color: var(--muted); font-size: 0.85rem; }
   .rest b { color: var(--text); font-weight: 500; }
 
+  /* ---- 体力づくり ---- */
+
+  .plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .plan-day { font-weight: 700; font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .plan-date { font-size: 0.74rem; color: var(--muted); }
+  .phase-pill { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--panel-2); color: var(--muted); white-space: nowrap; }
+  .phase-pill.p1 { color: var(--ph1); }
+  .phase-pill.p2 { color: var(--ph2); }
+  .phase-pill.p3 { color: var(--ph3); }
+  .plan-bar { height: 5px; border-radius: 3px; background: var(--panel-2); margin: 10px 0 8px; overflow: hidden; }
+  .plan-bar i { display: block; height: 100%; }
+  .plan-tasks { display: flex; flex-direction: column; gap: 7px; margin-top: 11px; }
+  .ptask { display: flex; gap: 11px; align-items: flex-start; background: var(--panel-2); border-radius: 11px; padding: 11px 12px; }
+  .ptask input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+  .ptask b { display: block; font-weight: 500; font-size: 0.88rem; }
+  .ptask small { display: block; color: var(--muted); font-size: 0.74rem; line-height: 1.6; }
+  .ptask.done b { color: var(--muted); }
+  .plan-guide { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; font-size: 0.8rem; }
+  .plan-guide summary { font-size: 0.84rem; cursor: pointer; }
+  .plan-guide p { margin: 8px 0 0; line-height: 1.7; }
+  .plan-guide ul { margin: 8px 0 0; padding-left: 1.2em; line-height: 1.7; }
+  .plan-rows { display: grid; grid-template-columns: 4.2em 1fr; gap: 6px 10px; margin-top: 9px; }
+  .plan-rows b { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ph1); }
+  .plan-rows small { display: block; color: var(--muted); font-size: 0.72rem; }
+  .ph1t { color: var(--ph1); }
+  .ph2t { color: var(--ph2); }
+  .ph3t { color: var(--ph3); }
+  .dateinput {
+    font: inherit; font-size: 0.86rem; color: var(--text); color-scheme: dark;
+    background: var(--panel-2); border: 0; border-radius: 10px; padding: 10px 11px; width: 100%;
+  }
+
   /* ---- calendar ---- */
 
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
@@ -190,6 +225,16 @@
   .day .mk { font-style: normal; font-size: 0.58rem; line-height: 1; color: var(--accent); }
   .day .mk.plan { color: var(--muted); }
   .day.full .mk, .day.part .mk { color: rgba(255,255,255,0.85); }
+  /* 体力づくりのフェーズは下線、チェックした日は右上の点 */
+  .day.ph1::after, .day.ph2::after, .day.ph3::after {
+    content: ""; position: absolute; left: 30%; right: 30%; bottom: 3px; height: 2px; border-radius: 2px;
+  }
+  .day.ph1::after { background: var(--ph1); }
+  .day.ph2::after { background: var(--ph2); }
+  .day.ph3::after { background: var(--ph3); }
+  .day.pc::before {
+    content: ""; position: absolute; top: 4px; right: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--ph1);
+  }
 
   .legend { display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: 10px; font-size: 0.7rem; color: var(--muted); }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
