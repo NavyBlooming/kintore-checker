@@ -2226,6 +2226,25 @@
 
   loadPacks().then(function () { renderPacks(); });
 
+  // 古い版のページが開いたら、最新版を読み直す。GitHub Pages は HTML を10分キャッシュさせ、
+  // ホーム画面から開くアプリはそれより長く古いページを使い続けることがある
+  function checkLatest() {
+    if (VERSION === "?") return;
+    fetch(location.pathname + "?t=" + Date.now(), { cache: "no-store" }).then(function (r) {
+      return r.ok ? r.text() : "";
+    }).then(function (html) {
+      var m = /app\.js\?v=([^"&]+)/.exec(html);
+      if (!m || m[1] === VERSION) return;
+      // 読み直しても古いままなら、繰り返さない
+      if (new URLSearchParams(location.search).get("v") === m[1]) return;
+      location.replace(location.pathname + "?v=" + encodeURIComponent(m[1]));
+    }).catch(function () {});
+  }
+  checkLatest();
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) checkLatest();
+  });
+
   dbReady = openDB().then(function (d) {
     db = d;
     return tx("readonly", function (s) { return s.getAll(); });
