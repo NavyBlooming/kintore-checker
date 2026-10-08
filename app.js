@@ -20,6 +20,8 @@
   var INTERVAL_CHOICES = [1, 2, 3];
   var INTERVAL_LABEL = { 1: "毎日", 2: "隔日", 3: "3日に1回" };
   var DAY_MS = 86400000;
+  // 日付の区切りは午前4時。0時を過ぎてから終えたセットも、前の日の分にする
+  var DAY_START_HOUR = 4;
   var SUFFIX = DEMO ? ".demo" : "";
   var LS_SETTINGS = "wt.settings.v3" + SUFFIX;
   var LS_LOG = "wt.log.v3" + SUFFIX;
@@ -309,12 +311,11 @@
   /* ---------- storage ---------- */
 
   function loadSettings() {
-    var t = new Date();
     var d = {
       mode: "interval",
       days: [1, 3, 5],
       interval: 2,
-      anchor: t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()),
+      anchor: key(today()),
       moved: {},
       skipped: {},
       shifted: {},
@@ -549,7 +550,11 @@
 
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function key(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
-  function today() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+  function today() {
+    var t = new Date();
+    t.setHours(t.getHours() - DAY_START_HOUR);
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  }
   function fromKey(k) { var p = k.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
 
   /* ---------- seasons ---------- */
