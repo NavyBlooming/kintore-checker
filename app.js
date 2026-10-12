@@ -39,7 +39,7 @@
   var YT = "https://www.youtube.com/watch?v=";
 
   var ABS = {
-    id: "abs", name: "ニートゥチェスト", reps: 20, note: "腹。どの回でも最後に",
+    id: "abs", name: "ニートゥチェスト", reps: 25, note: "腹。どの回でも最後に",
     how: YT + "OPeDVbIDcgg"
   };
 
@@ -49,9 +49,9 @@
     {
       id: "chest", label: "胸の日",
       moves: [
-        { id: "pushup", name: "腕立て伏せ", reps: 20, note: "きつければ膝をついて",
+        { id: "pushup", name: "腕立て伏せ", reps: 25, note: "きつければ膝をついて",
           how: YT + "k4fsFKCp5iU" },
-        { id: "kickback", name: "キックバック", reps: 40, note: "左右20回ずつ。ペットボトルを持つ",
+        { id: "kickback", name: "キックバック", reps: 50, note: "左右25回ずつ。ペットボトルを持つ",
           how: howTo("キックバック 二の腕") },
         ABS
       ]
@@ -59,9 +59,9 @@
     {
       id: "legs", label: "脚の日",
       moves: [
-        { id: "squat", name: "スクワット", reps: 20, note: "椅子に座って立つ動作から",
+        { id: "squat", name: "スクワット", reps: 25, note: "椅子に座って立つ動作から",
           how: YT + "SFnfYPktYBU" },
-        { id: "calf", name: "カーフレイズ", reps: 30, note: "かかとの上げ下げ",
+        { id: "calf", name: "カーフレイズ", reps: 40, note: "かかとの上げ下げ",
           how: howTo("カーフレイズ ふくらはぎ") },
         ABS
       ]
@@ -69,9 +69,9 @@
     {
       id: "back", label: "背中の日",
       moves: [
-        { id: "row", name: "ベントオーバーローイング", reps: 40, note: "左右20回ずつ。ペットボトルを持つ",
+        { id: "row", name: "ベントオーバーローイング", reps: 50, note: "左右25回ずつ。ペットボトルを持つ",
           how: howTo("ベントオーバーローイング 背中") },
-        { id: "backext", name: "バックエクステンション", reps: 20, note: "うつ伏せから上体を反らす",
+        { id: "backext", name: "バックエクステンション", reps: 25, note: "うつ伏せから上体を反らす",
           how: howTo("バックエクステンション 背中") },
         ABS
       ]
