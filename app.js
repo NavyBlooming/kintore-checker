@@ -79,20 +79,20 @@
   ];
 
   // 人工関節でもできるメニュー。胸 → 脚 → 背中 の並びには入れず、ボタンで選んだ日だけ使う。
-  // 股関節・膝のどちらでも避けたい、深く曲げる・ひねる・跳ぶ動きを入れない。腹のニートゥチェストも外す。
+  // 人工股関節で避けたい、深く曲げる・脚が内側へ入る・内股にひねる動きを入れない。腹のニートゥチェストも外す。
   function rehabHow(q) {
-    return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q + " 人工関節 リハビリ");
+    return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q + " 人工股関節 リハビリ");
   }
   var JOINT = {
     id: "joint", label: "関節ケア",
     moves: [
-      { id: "chairstand", name: "椅子から立ち座り", reps: 10, note: "高めの椅子で。膝がお尻より下がらない高さ。手で支えてOK",
+      { id: "chairstand", name: "椅子から立ち座り", reps: 10, note: "高めの椅子で、膝がお尻より下がらない高さ。膝は肩幅に開いたまま。手で支えてOK",
         how: rehabHow("椅子 立ち座り") },
       { id: "wallpush", name: "壁腕立て伏せ", reps: 15, note: "壁に手をつき、体はまっすぐ",
         how: rehabHow("壁 腕立て") },
-      { id: "sideleg", name: "脚の横上げ", reps: 20, note: "左右10回ずつ。椅子の背につかまり、つま先は正面のまま",
+      { id: "sideleg", name: "脚の横上げ", reps: 20, note: "左右10回ずつ。椅子の背につかまり、つま先は正面のまま。下ろすとき反対の脚より内側へ入れない",
         how: rehabHow("立位 脚 横上げ") },
-      { id: "bridge", name: "ヒップリフト", reps: 10, note: "あお向けで膝を立て、お尻を持ち上げる",
+      { id: "bridge", name: "ヒップリフト", reps: 10, note: "あお向けで膝を立て、膝を肩幅に開いたままお尻を持ち上げる",
         how: rehabHow("ブリッジ") }
     ]
   };
@@ -1487,7 +1487,7 @@
 
     if (sess.id === JOINT.id) {
       moves.innerHTML += '<p class="rest" style="margin-top:14px">' +
-        "痛みが出たらその種目はやめておきます。手術後の動かし方の制限があるときは、主治医や理学療法士の指示を優先してください。</p>";
+        "痛みが出たらその種目はやめておきます。股関節を深く曲げる・脚を組む・内股にひねる姿勢は避け、主治医や理学療法士から言われている制限を優先してください。</p>";
     }
 
     if (key(date) === key(today()) && shiftedToday() && daySets(k) === 0) {
