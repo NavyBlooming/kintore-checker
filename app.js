@@ -96,7 +96,22 @@
         how: rehabHow("ブリッジ") }
     ]
   };
-  var ALL_SESSIONS = SESSIONS.concat([JOINT]);
+  // スクワット100回。これも並びの外で、1セット終えると表示中の絵が全部開く
+  var SQUAT100 = {
+    id: "squat100", label: "スクワット100", oneSet: true, openAll: true,
+    moves: [
+      { id: "squat100", name: "スクワット", reps: 100, note: "1セットで、いま表示している絵が全部開きます。途中で休んでもOK",
+        how: YT + "SFnfYPktYBU" }
+    ]
+  };
+  var EXTRAS = [JOINT, SQUAT100];
+  var ALL_SESSIONS = SESSIONS.concat(EXTRAS);
+  function isExtra(id) {
+    for (var i = 0; i < EXTRAS.length; i++) if (EXTRAS[i].id === id) return true;
+    return false;
+  }
+  // 1種目あたりのセット数。設定で増やしても、1セットで終わるメニューは1のまま
+  function perMoveOf(sess) { return sess && sess.oneSet ? 1 : settings.perMove; }
 
   /* ---------- 画面（本体とデモで完全に共通） ---------- */
 
@@ -338,6 +353,7 @@
       anchor: key(today()),
       moved: {},
       extra: {},
+      boost: {},
       skipped: {},
       shifted: {},
       sets: 6,
@@ -359,6 +375,7 @@
       if (typeof s.anchor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.anchor)) d.anchor = s.anchor;
       if (s.moved && typeof s.moved === "object") d.moved = s.moved;
       if (s.extra && typeof s.extra === "object") d.extra = s.extra;
+      if (s.boost && typeof s.boost === "object") d.boost = s.boost;
       if (s.skipped && typeof s.skipped === "object") d.skipped = s.skipped;
       if (s.shifted && typeof s.shifted === "object") d.shifted = s.shifted;
       if (SET_CHOICES.indexOf(s.sets) >= 0) d.sets = s.sets;
@@ -683,7 +700,7 @@
   function sessionFor(date) {
     var k = key(date);
     if (k < curSeason().start) return null;   // シーズンが始まる前は予定日にしない
-    if (settings.extra[k]) return JOINT;
+    if (settings.extra[k]) return sessionById(settings.extra[k]);
     if (settings.moved[k]) return sessionById(settings.moved[k]);
     if (settings.skipped[k]) return null;
     var idx = baseIndex(date);
@@ -722,10 +739,10 @@
     if (!cur || cur.id === sessId) return;
     var k = key(date);
 
-    if (sessId === JOINT.id) {
-      // 関節ケアは並びの外。その日にやるはずだったメニューは次の予定日へ回す
-      settings.extra[k] = JOINT.id;
-      nextFrom(date, sessIndex(cur.id));
+    if (isExtra(sessId)) {
+      // 並びの外のメニュー。その日にやるはずだったメニューは次の予定日へ回す
+      if (!settings.extra[k]) nextFrom(date, sessIndex(cur.id));
+      settings.extra[k] = sessId;
       saveSettings();
       return;
     }
@@ -827,7 +844,7 @@
 
   function dayTargetSets(date) {
     var s = sessionFor(date);
-    return s ? s.moves.length * settings.perMove : 0;
+    return s ? s.moves.length * perMoveOf(s) : 0;
   }
 
   function totalSets() {
@@ -902,20 +919,41 @@
 
   // セットの増減を、いま表示している素材の開封状況に反映する。
   // 表示中が開ききっていれば次の未開封へ、0なら手前の開封済みへ自動で移る。
-  function applySetDelta(delta) {
+  // allKey を渡すと、1セットで表示中の素材を全部開く。開いた量を allKey の日に覚えておき、
+  // 取り消したときはその量だけ閉じ直す。
+  function applySetDelta(delta, allKey) {
+    var b = allKey ? settings.boost[allKey] : null;
     if (!images.length) {
-      settings.sampleSets = Math.max(0, Math.min(settings.sets, (settings.sampleSets || 0) + delta));
+      var add = delta;
+      if (allKey && delta > 0) {
+        add = settings.sets - (settings.sampleSets || 0);
+        settings.boost[allKey] = { id: "sample", n: add };
+      } else if (b && delta < 0) {
+        add = -b.n;
+        delete settings.boost[allKey];
+      }
+      settings.sampleSets = Math.max(0, Math.min(settings.sets, (settings.sampleSets || 0) + add));
       saveSettings();
       return Promise.resolve();
     }
     var i = currentIndex();
     var j;
-    if (delta > 0) {
+    if (b && delta < 0) {
+      for (j = 0; j < images.length; j++) if (images[j].id === b.id) i = j;
+      delete settings.boost[allKey];
+      if (images[i].id !== b.id) { saveSettings(); return Promise.resolve(); }
+      images[i].sets = Math.max(0, setsOf(images[i]) - b.n);
+    } else if (delta > 0) {
       if (isFull(images[i])) {
         for (j = 0; j < images.length; j++) if (!isFull(images[j])) { i = j; break; }
       }
       if (isFull(images[i])) return Promise.resolve();
-      images[i].sets = setsOf(images[i]) + 1;
+      if (allKey) {
+        settings.boost[allKey] = { id: images[i].id, n: settings.sets - setsOf(images[i]) };
+        images[i].sets = settings.sets;
+      } else {
+        images[i].sets = setsOf(images[i]) + 1;
+      }
     } else {
       if (setsOf(images[i]) <= 0) {
         for (j = i - 1; j >= 0; j--) if (setsOf(images[j]) > 0) { i = j; break; }
@@ -1449,12 +1487,12 @@
     }
 
     document.getElementById("sessTitle").textContent =
-      sess.label + "（" + sess.moves.length * settings.perMove + "セット）" +
+      sess.label + "（" + sess.moves.length * perMoveOf(sess) + "セット）" +
       (key(date) === key(today()) && shiftedToday() ? " ・繰り上げ" : "");
 
     moves.innerHTML = sess.moves.map(function (m) {
       var n = setsOn(k, m.id);
-      var per = settings.perMove;
+      var per = perMoveOf(sess);
       var ctl;
       if (settings.debug) {
         ctl = '<button class="step" data-d="-1"' + (n <= 0 ? " disabled" : "") + ">−1</button>" +
@@ -1859,11 +1897,12 @@
 
     var date = activeDate();
     var k = key(date);
-    if (!activeSession(date)) return;
+    var sess = activeSession(date);
+    if (!sess) return;
 
     var moveId = wrap.dataset.move;
     var d = Number(b.dataset.d);
-    if (d > 0 && !settings.debug && setsOn(k, moveId) >= settings.perMove) return;
+    if (d > 0 && !settings.debug && setsOn(k, moveId) >= perMoveOf(sess)) return;
     addSet(k, moveId, d);
     var before = progress();
     function done() {
@@ -1873,7 +1912,7 @@
       if (after.idx !== before.idx) scrollToTiles(0, after.tiles);
       else if (after.tiles > before.tiles) scrollToTiles(before.tiles, after.tiles);
     }
-    applySetDelta(d).then(done, done);
+    applySetDelta(d, sess.openAll ? k : null).then(done, done);
   });
 
   // 開いたばかりの区画が画面に入るところまで戻す。隠しているときは動かさない

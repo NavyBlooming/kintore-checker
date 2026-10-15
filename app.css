@@ -137,8 +137,8 @@
   .sess-title { font-weight: 700; font-size: 0.98rem; }
   .sess-date { font-size: 0.76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-  .tabs { display: flex; gap: 5px; margin-bottom: 12px; }
-  .tabs button { flex: 1; padding: 7px 0; border-radius: 8px; background: var(--panel-2); font-size: 0.78rem; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+  .tabs button { flex: 1 0 auto; padding: 7px 10px; border-radius: 8px; background: var(--panel-2); font-size: 0.78rem; white-space: nowrap; }
   .tabs button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
   .move { padding: 13px 0; border-top: 1px solid var(--line); }
