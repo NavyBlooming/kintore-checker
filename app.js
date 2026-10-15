@@ -43,7 +43,7 @@
     how: YT + "OPeDVbIDcgg"
   };
 
-  var SHORT = { chest: "胸", legs: "脚", back: "背" };
+  var SHORT = { chest: "胸", legs: "脚", back: "背", joint: "関" };
 
   var SESSIONS = [
     {
@@ -77,6 +77,26 @@
       ]
     }
   ];
+
+  // 人工関節でもできるメニュー。胸 → 脚 → 背中 の並びには入れず、ボタンで選んだ日だけ使う。
+  // 股関節・膝のどちらでも避けたい、深く曲げる・ひねる・跳ぶ動きを入れない。腹のニートゥチェストも外す。
+  function rehabHow(q) {
+    return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q + " 人工関節 リハビリ");
+  }
+  var JOINT = {
+    id: "joint", label: "関節ケア",
+    moves: [
+      { id: "chairstand", name: "椅子から立ち座り", reps: 10, note: "高めの椅子で。膝がお尻より下がらない高さ。手で支えてOK",
+        how: rehabHow("椅子 立ち座り") },
+      { id: "wallpush", name: "壁腕立て伏せ", reps: 15, note: "壁に手をつき、体はまっすぐ",
+        how: rehabHow("壁 腕立て") },
+      { id: "sideleg", name: "脚の横上げ", reps: 20, note: "左右10回ずつ。椅子の背につかまり、つま先は正面のまま",
+        how: rehabHow("立位 脚 横上げ") },
+      { id: "bridge", name: "ヒップリフト", reps: 10, note: "あお向けで膝を立て、お尻を持ち上げる",
+        how: rehabHow("ブリッジ") }
+    ]
+  };
+  var ALL_SESSIONS = SESSIONS.concat([JOINT]);
 
   /* ---------- 画面（本体とデモで完全に共通） ---------- */
 
@@ -317,6 +337,7 @@
       interval: 2,
       anchor: key(today()),
       moved: {},
+      extra: {},
       skipped: {},
       shifted: {},
       sets: 6,
@@ -337,6 +358,7 @@
       if (INTERVAL_CHOICES.indexOf(s.interval) >= 0) d.interval = s.interval;
       if (typeof s.anchor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.anchor)) d.anchor = s.anchor;
       if (s.moved && typeof s.moved === "object") d.moved = s.moved;
+      if (s.extra && typeof s.extra === "object") d.extra = s.extra;
       if (s.skipped && typeof s.skipped === "object") d.skipped = s.skipped;
       if (s.shifted && typeof s.shifted === "object") d.shifted = s.shifted;
       if (SET_CHOICES.indexOf(s.sets) >= 0) d.sets = s.sets;
@@ -645,7 +667,7 @@
   function plannedDays() { return settings.days.slice().sort(function (a, b) { return a - b; }); }
 
   function sessionById(id) {
-    for (var i = 0; i < SESSIONS.length; i++) if (SESSIONS[i].id === id) return SESSIONS[i];
+    for (var i = 0; i < ALL_SESSIONS.length; i++) if (ALL_SESSIONS[i].id === id) return ALL_SESSIONS[i];
     return SESSIONS[0];
   }
 
@@ -661,6 +683,7 @@
   function sessionFor(date) {
     var k = key(date);
     if (k < curSeason().start) return null;   // シーズンが始まる前は予定日にしない
+    if (settings.extra[k]) return JOINT;
     if (settings.moved[k]) return sessionById(settings.moved[k]);
     if (settings.skipped[k]) return null;
     var idx = baseIndex(date);
@@ -697,25 +720,42 @@
   function pickSession(date, sessId) {
     var cur = sessionFor(date);
     if (!cur || cur.id === sessId) return;
-    var to = sessIndex(sessId);
     var k = key(date);
+
+    if (sessId === JOINT.id) {
+      // 関節ケアは並びの外。その日にやるはずだったメニューは次の予定日へ回す
+      settings.extra[k] = JOINT.id;
+      nextFrom(date, sessIndex(cur.id));
+      saveSettings();
+      return;
+    }
+    if (settings.extra[k]) {
+      delete settings.extra[k];
+      cur = sessionFor(date);
+    }
+    var to = sessIndex(sessId);
 
     if (settings.moved[k]) {
       // 曜日で決めるときの繰り上げは、その日だけの指定で並びの外にいる。
       // 回転では動かないので指定を書き換え、次の予定日が続きになるよう並びを合わせる。
       settings.moved[k] = sessId;
-      for (var i = 1; i <= 14; i++) {
-        var d = addDays(date, i), dk = key(d);
-        if (settings.moved[dk] || settings.skipped[dk]) continue;
-        var b = baseIndex(d);
-        if (b === null) continue;
-        settings.rot = mod3(to + 1 - b);
-        break;
-      }
+      nextFrom(date, to + 1);
     } else {
       settings.rot = mod3(settings.rot + to - sessIndex(cur.id));
     }
     saveSettings();
+  }
+
+  // date の次の予定日のメニューが SESSIONS[idx] になるよう、並びを合わせる
+  function nextFrom(date, idx) {
+    for (var i = 1; i <= 14; i++) {
+      var d = addDays(date, i), dk = key(d);
+      if (settings.moved[dk] || settings.skipped[dk] || settings.extra[dk]) continue;
+      var b = baseIndex(d);
+      if (b === null) continue;
+      settings.rot = mod3(idx - b);
+      return;
+    }
   }
 
   // 前日が未実施のトレーニング日で、今日が休養日なら繰り上げられる
@@ -769,10 +809,10 @@
   function doneSession(k) {
     var o = log[k];
     if (!o) return null;
-    for (var i = 0; i < SESSIONS.length; i++) {
-      var mv = SESSIONS[i].moves;
+    for (var i = 0; i < ALL_SESSIONS.length; i++) {
+      var mv = ALL_SESSIONS[i].moves;
       for (var j = 0; j < mv.length; j++) {
-        if (mv[j].id !== ABS.id && o[mv[j].id]) return SESSIONS[i];
+        if (mv[j].id !== ABS.id && o[mv[j].id]) return ALL_SESSIONS[i];
       }
     }
     return null;
@@ -1381,7 +1421,7 @@
     // 休養日はメニューを選べない。ずらすボタンのほうを使う
     if (settings.debug || sess) {
       tabs.hidden = false;
-      tabs.innerHTML = SESSIONS.map(function (s) {
+      tabs.innerHTML = ALL_SESSIONS.map(function (s) {
         return '<button data-sess="' + s.id + '" class="' +
           (sess && s.id === sess.id ? "on" : "") + '">' + s.label + "</button>";
       }).join("");
@@ -1444,6 +1484,11 @@
         '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
         '<div class="ctl">' + ctl + "</div></div>";
     }).join("");
+
+    if (sess.id === JOINT.id) {
+      moves.innerHTML += '<p class="rest" style="margin-top:14px">' +
+        "痛みが出たらその種目はやめておきます。手術後の動かし方の制限があるときは、主治医や理学療法士の指示を優先してください。</p>";
+    }
 
     if (key(date) === key(today()) && shiftedToday() && daySets(k) === 0) {
       moves.innerHTML += '<p class="rest" style="margin-top:14px">' +
