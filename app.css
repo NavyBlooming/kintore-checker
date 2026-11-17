@@ -147,6 +147,10 @@
   .move-name { font-weight: 500; font-size: 0.93rem; }
   .move-note { font-size: 0.72rem; color: var(--muted); }
   .move-n { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; flex: none; }
+  /* 締めの体幹。ほかの3種目と見分けられるよう色を変える */
+  .move.core { border-top: 1px dashed var(--ph2); }
+  .core-label { font-size: 0.66rem; letter-spacing: 0.06em; color: var(--ph2); margin-bottom: 3px; }
+  .move.core .move-name { color: var(--ph2); }
   .move-n small { font-weight: 400; font-size: 0.74rem; color: var(--muted); margin-left: 1px; }
   .move-sets { font-size: 0.72rem; color: var(--warn); font-variant-numeric: tabular-nums; }
   .move-note .how { color: var(--accent); text-decoration: none; white-space: nowrap; margin-left: 2px; }

@@ -45,9 +45,27 @@
 
   var SHORT = { chest: "胸", legs: "脚", back: "背", joint: "関" };
 
+  // 締めの体幹。胸・脚・背の各日の最後に1種目ずつ足す。設定のセット数に関係なく1セット。
+  // デッドバグとサイドプランクは控え。体幹の日を作るときに使う。
+  // sec がある種目は秒で数え、タイマーを出す。
+  var CORE = {
+    plank: { id: "plank", name: "プランク", sec: 30, note: "肘とつま先で支え、頭からかかとまでまっすぐ",
+      how: howTo("プランク 体幹") },
+    glutebridge: { id: "glutebridge", name: "グルートブリッジ", reps: 15, note: "あお向けで膝を立て、お尻を締めて持ち上げる",
+      how: howTo("グルートブリッジ お尻") },
+    birddog: { id: "birddog", name: "バードドッグ", reps: 20, note: "左右10回ずつ。四つんばいで、対角の手と脚をまっすぐ伸ばす",
+      how: howTo("バードドッグ 体幹") },
+    deadbug: { id: "deadbug", name: "デッドバグ", reps: 20, note: "左右10回ずつ。あお向けで、対角の手と脚をゆっくり下ろす",
+      how: howTo("デッドバグ 体幹") },
+    sideplank: { id: "sideplank", name: "サイドプランク", sec: 20, note: "左右20秒ずつ。肘と足の側面で支え、体を一直線に",
+      how: howTo("サイドプランク 体幹") }
+  };
+  // この日から締めの体幹を足す。前の日は3種目のまま完了を判定する
+  var CORE_FROM = "2026-11-18";
+
   var SESSIONS = [
     {
-      id: "chest", label: "胸の日",
+      id: "chest", label: "胸の日", core: CORE.plank,
       moves: [
         { id: "pushup", name: "腕立て伏せ", reps: 25, note: "きつければ膝をついて",
           how: YT + "k4fsFKCp5iU" },
@@ -57,7 +75,7 @@
       ]
     },
     {
-      id: "legs", label: "脚の日",
+      id: "legs", label: "脚の日", core: CORE.glutebridge,
       moves: [
         { id: "squat", name: "スクワット", reps: 25, note: "椅子に座って立つ動作から",
           how: YT + "SFnfYPktYBU" },
@@ -67,7 +85,7 @@
       ]
     },
     {
-      id: "back", label: "背中の日",
+      id: "back", label: "背中の日", core: CORE.birddog,
       moves: [
         { id: "row", name: "ベントオーバーローイング", reps: 50, note: "左右25回ずつ。ペットボトルを持つ",
           how: howTo("ベントオーバーローイング 背中") },
@@ -112,6 +130,22 @@
   }
   // 1種目あたりのセット数。設定で増やしても、1セットで終わるメニューは1のまま
   function perMoveOf(sess) { return sess && sess.oneSet ? 1 : settings.perMove; }
+  // 締めの体幹は常に1セット
+  function perSetOf(sess, m) { return m.isCore ? 1 : perMoveOf(sess); }
+
+  // その日のメニューの種目。締めの体幹は CORE_FROM 以降の日だけ最後に足す
+  function movesOf(sess, k) {
+    if (!sess.core || k < CORE_FROM) return sess.moves;
+    var c = {};
+    for (var f in sess.core) c[f] = sess.core[f];
+    c.isCore = true;
+    return sess.moves.concat([c]);
+  }
+  function targetSetsOf(sess, k) {
+    var n = 0;
+    movesOf(sess, k).forEach(function (m) { n += perSetOf(sess, m); });
+    return n;
+  }
 
   /* ---------- 画面（本体とデモで完全に共通） ---------- */
 
@@ -844,7 +878,7 @@
 
   function dayTargetSets(date) {
     var s = sessionFor(date);
-    return s ? s.moves.length * perMoveOf(s) : 0;
+    return s ? targetSetsOf(s, key(date)) : 0;
   }
 
   function totalSets() {
@@ -1487,12 +1521,12 @@
     }
 
     document.getElementById("sessTitle").textContent =
-      sess.label + "（" + sess.moves.length * perMoveOf(sess) + "セット）" +
+      sess.label + "（" + targetSetsOf(sess, k) + "セット）" +
       (key(date) === key(today()) && shiftedToday() ? " ・繰り上げ" : "");
 
-    moves.innerHTML = sess.moves.map(function (m) {
+    moves.innerHTML = movesOf(sess, k).map(function (m) {
       var n = setsOn(k, m.id);
-      var per = perMoveOf(sess);
+      var per = perSetOf(sess, m);
       var ctl;
       if (settings.debug) {
         ctl = '<button class="step" data-d="-1"' + (n <= 0 ? " disabled" : "") + ">−1</button>" +
@@ -1508,7 +1542,8 @@
             ? '<button class="wide undo" data-d="0" disabled>完了 ✓</button>'
             : '<button class="wide plus" data-d="1">セット完了（' + n + " / " + per + "）</button>");
       }
-      return '<div class="move" data-move="' + m.id + '">' +
+      return '<div class="move' + (m.isCore ? " core" : "") + '" data-move="' + m.id + '">' +
+        (m.isCore ? '<div class="core-label">締めの体幹</div>' : "") +
         '<div class="move-top"><div>' +
         '<div class="move-name">' + m.name + "</div>" +
         '<div class="move-note">' + m.note +
@@ -1519,7 +1554,7 @@
           : (!settings.debug && per > 1 && n > 0
             ? '<div class="move-sets">' + n + " / " + per + " セット</div>" : "")) +
         "</div>" +
-        '<div class="move-n">' + m.reps + "<small>回</small></div></div>" +
+        '<div class="move-n">' + (m.sec ? m.sec + "<small>秒</small>" : m.reps + "<small>回</small>") + "</div></div>" +
         '<div class="ctl">' + ctl + "</div></div>";
     }).join("");
 
@@ -1902,7 +1937,10 @@
 
     var moveId = wrap.dataset.move;
     var d = Number(b.dataset.d);
-    if (d > 0 && !settings.debug && setsOn(k, moveId) >= perMoveOf(sess)) return;
+    var mv = null;
+    movesOf(sess, k).forEach(function (m) { if (m.id === moveId) mv = m; });
+    if (!mv) return;
+    if (d > 0 && !settings.debug && setsOn(k, moveId) >= perSetOf(sess, mv)) return;
     addSet(k, moveId, d);
     var before = progress();
     function done() {
