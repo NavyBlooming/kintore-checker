@@ -1480,6 +1480,147 @@
     return sessionFor(date);
   }
 
+  /* ---------- タイマー ----------
+   *
+   * 秒で数える種目に付ける。押すと3秒の準備のあとに数え始める。
+   * 終わってもセット完了は付けない。記録は今までどおり手で押す。
+   * 残りは時刻から計算するので、画面が止まっていた間もずれない。
+   * 枠は一度だけ作り、数字・バー・ボタンの文字だけを書き換える。
+   * ボタンごと作り直すと、押している途中で消えてタップを取りこぼすため。
+   */
+
+  var READY_MS = 3000;
+  var timer = null;   // { id, total, phase: "idle"|"ready"|"run"|"paused"|"done", at, left, shown }
+  var timerTick = 0;
+  var audio = null;
+  var TIMER_HTML =
+    '<div class="timer">' +
+      '<div class="timer-cap"></div>' +
+      '<div class="timer-n"></div>' +
+      '<div class="timer-bar"><i></i></div>' +
+      '<div class="ctl">' +
+        '<button class="wide" data-t="toggle"></button>' +
+        '<button class="step" data-t="reset"></button>' +
+      '</div>' +
+    '</div>';
+
+  // 音はタップの中で鳴らせるようにしておかないと、iPhone では最後まで鳴らない
+  function unlockAudio() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+    } catch (e) { audio = null; }
+  }
+  function beep(freq, ms, delay) {
+    if (!audio) return;
+    try {
+      var t = audio.currentTime + (delay || 0) / 1000;
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.type = "sine";
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.4, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+      o.connect(g);
+      g.connect(audio.destination);
+      o.start(t);
+      o.stop(t + ms / 1000 + 0.05);
+    } catch (e) {}
+  }
+
+  function timerReady(now) {
+    timer.phase = "ready";
+    timer.at = now + READY_MS;
+    timer.shown = 0;
+  }
+  function timerOpen(m) {
+    unlockAudio();
+    timer = { id: m.id, total: m.sec * 1000, left: m.sec * 1000 };
+    timerReady(Date.now());
+    timerRun();
+  }
+  function timerRun() {
+    if (!timerTick) timerTick = setInterval(timerStep, 100);
+    timerStep();
+  }
+  function timerStep() {
+    var now = Date.now();
+    if (timer && timer.phase === "ready") {
+      var r = Math.ceil((timer.at - now) / 1000);
+      if (r <= 0) {
+        timer.phase = "run";
+        timer.at = now + timer.left;
+        beep(1320, 260);
+      } else if (r !== timer.shown) {
+        timer.shown = r;
+        beep(880, 120);
+      }
+    }
+    if (timer && timer.phase === "run") {
+      timer.left = Math.max(0, timer.at - now);
+      if (timer.left <= 0) {
+        timer.phase = "done";
+        beep(1320, 450, 0);
+        beep(1320, 450, 550);
+        beep(1760, 800, 1100);
+        try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 600]); } catch (e) {}
+      }
+    }
+    if (!timer || (timer.phase !== "ready" && timer.phase !== "run")) {
+      clearInterval(timerTick);
+      timerTick = 0;
+    }
+    paintTimer();
+  }
+
+  function paintTimer() {
+    var el = document.querySelector("#moves .timer");
+    if (!el || !timer) return;
+    var ph = timer.phase;
+    var cap = { idle: "スタートで3秒後に始まります", ready: "準備", run: "残り",
+      paused: "一時停止中", done: "おわり。セット完了は下のボタンで" }[ph];
+    var n = ph === "ready" ? Math.max(1, Math.ceil((timer.at - Date.now()) / 1000))
+      : ph === "done" ? 0 : Math.ceil(timer.left / 1000);
+    el.className = "timer " + ph;
+    el.querySelector(".timer-cap").textContent = cap;
+    el.querySelector(".timer-n").textContent = n;
+    el.querySelector(".timer-bar i").style.width = ((timer.total - timer.left) / timer.total * 100).toFixed(1) + "%";
+    el.querySelector('[data-t="toggle"]').textContent =
+      { idle: "スタート", ready: "一時停止", run: "一時停止", paused: "再開", done: "もう一度" }[ph];
+    el.querySelector('[data-t="reset"]').textContent = ph === "idle" || ph === "done" ? "閉じる" : "リセット";
+  }
+
+  function onTimerButton(act, m) {
+    var now = Date.now();
+    if (act === "open") {
+      if (!timer || timer.id !== m.id) { timerOpen(m); renderSession(); }
+      return;
+    }
+    if (!timer) return;
+    if (act === "toggle") {
+      unlockAudio();
+      if (timer.phase === "ready" || timer.phase === "run") {
+        if (timer.phase === "run") timer.left = Math.max(0, timer.at - now);
+        timer.phase = "paused";
+      } else {
+        if (timer.phase === "done") timer.left = timer.total;
+        timerReady(now);
+      }
+      timerRun();
+      return;
+    }
+    if (act === "reset") {
+      if (timer.phase === "idle" || timer.phase === "done") {
+        timer = null;
+        renderSession();
+        return;
+      }
+      timer.phase = "idle";
+      timer.left = timer.total;
+      timerRun();
+    }
+  }
+
   function renderSession() {
     var date = activeDate();
     var k = key(date);
@@ -1555,8 +1696,12 @@
             ? '<div class="move-sets">' + n + " / " + per + " セット</div>" : "")) +
         "</div>" +
         '<div class="move-n">' + (m.sec ? m.sec + "<small>秒</small>" : m.reps + "<small>回</small>") + "</div></div>" +
-        '<div class="ctl">' + ctl + "</div></div>";
+        '<div class="ctl">' +
+        (m.sec ? '<button class="step tbtn" data-t="open">タイマー</button>' : "") +
+        ctl + "</div>" +
+        (timer && timer.id === m.id ? TIMER_HTML : "") + "</div>";
     }).join("");
+    paintTimer();
 
     if (sess.id === JOINT.id) {
       moves.innerHTML += '<p class="rest" style="margin-top:14px">' +
@@ -1925,6 +2070,16 @@
   /* ---------- events ---------- */
 
   document.getElementById("moves").addEventListener("click", function (e) {
+    var tb = e.target.closest("[data-t]");
+    if (tb) {
+      var tw = tb.closest("[data-move]");
+      var ts = activeSession(activeDate());
+      if (!tw || !ts) return;
+      movesOf(ts, key(activeDate())).forEach(function (m) {
+        if (m.id === tw.dataset.move) onTimerButton(tb.dataset.t, m);
+      });
+      return;
+    }
     var b = e.target.closest("[data-d]");
     if (!b || b.disabled) return;
     var wrap = b.closest("[data-move]");
