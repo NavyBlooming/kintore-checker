@@ -39,7 +39,7 @@
   var YT = "https://www.youtube.com/watch?v=";
 
   var ABS = {
-    id: "abs", name: "ニートゥチェスト", reps: 25, note: "腹。どの回でも最後に",
+    id: "abs", name: "ニートゥチェスト", reps: 25, note: "腹。どの回でも最後に", count: "あお向けで両手を床につき、両膝を胸へ引き寄せて伸ばす。引き寄せて戻すまでが1回。",
     how: YT + "OPeDVbIDcgg"
   };
 
@@ -49,15 +49,15 @@
   // デッドバグとサイドプランクは控え。体幹の日を作るときに使う。
   // sec がある種目は秒で数え、タイマーを出す。
   var CORE = {
-    plank: { id: "plank", name: "プランク", sec: 30, note: "肘とつま先で支え、頭からかかとまでまっすぐ",
+    plank: { id: "plank", name: "プランク", sec: 30, note: "肘とつま先で支え、頭からかかとまでまっすぐ", count: "肘とつま先で体を一直線に保ち、そのまま30秒キープ。腰を落とさない・反らさない。",
       how: howTo("プランク 体幹") },
-    glutebridge: { id: "glutebridge", name: "グルートブリッジ", reps: 15, note: "あお向けで膝を立て、お尻を締めて持ち上げる",
+    glutebridge: { id: "glutebridge", name: "グルートブリッジ", reps: 15, note: "あお向けで膝を立て、お尻を締めて持ち上げる", count: "お尻を締めて腰を持ち上げ、肩〜膝が一直線になったら上で1秒止める。ゆっくり下ろすまでが1回。勢いでバウンドさせない。",
       how: howTo("グルートブリッジ お尻") },
-    birddog: { id: "birddog", name: "バードドッグ", reps: 20, note: "左右10回ずつ。四つんばいで、対角の手と脚をまっすぐ伸ばす",
+    birddog: { id: "birddog", name: "バードドッグ", reps: 20, note: "左右10回ずつ。四つんばいで、対角の手と脚をまっすぐ伸ばす", count: "対角の手と足を伸ばし、体がブレないよう保って、戻すまでが1回。左右各10回。",
       how: howTo("バードドッグ 体幹") },
-    deadbug: { id: "deadbug", name: "デッドバグ", reps: 20, note: "左右10回ずつ。あお向けで、対角の手と脚をゆっくり下ろす",
+    deadbug: { id: "deadbug", name: "デッドバグ", reps: 20, note: "左右10回ずつ。あお向けで、対角の手と脚をゆっくり下ろす", count: "対角の手と脚を床すれすれまで下ろし、戻すまでが1回。腰は床に押しつけたまま。左右各10回。",
       how: howTo("デッドバグ 体幹") },
-    sideplank: { id: "sideplank", name: "サイドプランク", sec: 20, note: "左右20秒ずつ。肘と足の側面で支え、体を一直線に",
+    sideplank: { id: "sideplank", name: "サイドプランク", sec: 20, note: "左右20秒ずつ。肘と足の側面で支え、体を一直線に", count: "肘と足の側面で体を一直線に保ち、片側20秒キープ。反対側も20秒。",
       how: howTo("サイドプランク 体幹") }
   };
   // この日から締めの体幹を足す。前の日は3種目のまま完了を判定する
@@ -67,9 +67,9 @@
     {
       id: "chest", label: "胸の日", core: CORE.plank,
       moves: [
-        { id: "pushup", name: "腕立て伏せ", reps: 25, note: "きつければ膝をついて",
+        { id: "pushup", name: "腕立て伏せ", reps: 25, note: "きつければ膝をついて", count: "胸が床に近づくまで下ろし、腕を伸ばして戻るまでが1回。体は一直線のまま。",
           how: YT + "k4fsFKCp5iU" },
-        { id: "kickback", name: "キックバック", reps: 50, note: "左右25回ずつ。ペットボトルを持つ",
+        { id: "kickback", name: "キックバック", reps: 50, note: "左右25回ずつ。ペットボトルを持つ", count: "前かがみで肘を体の横に固定し、肘から先を後ろへ伸ばして戻すまでが1回。左右各25回。",
           how: howTo("キックバック 二の腕") },
         ABS
       ]
@@ -77,9 +77,9 @@
     {
       id: "legs", label: "脚の日", core: CORE.glutebridge,
       moves: [
-        { id: "squat", name: "スクワット", reps: 25, note: "椅子に座って立つ動作から",
+        { id: "squat", name: "スクワット", reps: 25, note: "椅子に座って立つ動作から", count: "お尻を後ろへ引いて太ももが床と平行近くまで下ろし、立ち上がるまでが1回。膝はつま先と同じ向き。",
           how: YT + "SFnfYPktYBU" },
-        { id: "calf", name: "カーフレイズ", reps: 40, note: "かかとの上げ下げ",
+        { id: "calf", name: "カーフレイズ", reps: 40, note: "かかとの上げ下げ", count: "かかとをできるだけ高く上げ、ゆっくり下ろすまでが1回。",
           how: howTo("カーフレイズ ふくらはぎ") },
         ABS
       ]
@@ -87,9 +87,9 @@
     {
       id: "back", label: "背中の日", core: CORE.birddog,
       moves: [
-        { id: "row", name: "ベントオーバーローイング", reps: 50, note: "左右25回ずつ。ペットボトルを持つ",
+        { id: "row", name: "ベントオーバーローイング", reps: 50, note: "左右25回ずつ。ペットボトルを持つ", count: "前かがみで背中をまっすぐ保ち、ボトルを脇腹へ引き上げて下ろすまでが1回。左右各25回。",
           how: howTo("ベントオーバーローイング 背中") },
-        { id: "backext", name: "バックエクステンション", reps: 25, note: "うつ伏せから上体を反らす",
+        { id: "backext", name: "バックエクステンション", reps: 25, note: "うつ伏せから上体を反らす", count: "うつ伏せで上体を反らし、上で1秒止めて下ろすまでが1回。反動をつけない。",
           how: howTo("バックエクステンション 背中") },
         ABS
       ]
@@ -104,13 +104,13 @@
   var JOINT = {
     id: "joint", label: "関節ケア",
     moves: [
-      { id: "chairstand", name: "椅子から立ち座り", reps: 10, note: "高めの椅子で、膝がお尻より下がらない高さ。膝は肩幅に開いたまま。手で支えてOK",
+      { id: "chairstand", name: "椅子から立ち座り", reps: 10, note: "高めの椅子で、膝がお尻より下がらない高さ。膝は肩幅に開いたまま。手で支えてOK", count: "座った状態から立ち上がり、また座るまでが1回。ゆっくり。",
         how: rehabHow("椅子 立ち座り") },
-      { id: "wallpush", name: "壁腕立て伏せ", reps: 15, note: "壁に手をつき、体はまっすぐ",
+      { id: "wallpush", name: "壁腕立て伏せ", reps: 15, note: "壁に手をつき、体はまっすぐ", count: "胸を壁に近づけ、腕を伸ばして戻るまでが1回。",
         how: rehabHow("壁 腕立て") },
-      { id: "sideleg", name: "脚の横上げ", reps: 20, note: "左右10回ずつ。椅子の背につかまり、つま先は正面のまま。下ろすとき反対の脚より内側へ入れない",
+      { id: "sideleg", name: "脚の横上げ", reps: 20, note: "左右10回ずつ。椅子の背につかまり、つま先は正面のまま。下ろすとき反対の脚より内側へ入れない", count: "脚を真横へ上げ、ゆっくり下ろすまでが1回。左右各10回。",
         how: rehabHow("立位 脚 横上げ") },
-      { id: "bridge", name: "ヒップリフト", reps: 10, note: "あお向けで膝を立て、膝を肩幅に開いたままお尻を持ち上げる",
+      { id: "bridge", name: "ヒップリフト", reps: 10, note: "あお向けで膝を立て、膝を肩幅に開いたままお尻を持ち上げる", count: "お尻を持ち上げ、ゆっくり下ろすまでが1回。",
         how: rehabHow("ブリッジ") }
     ]
   };
@@ -118,7 +118,7 @@
   var SQUAT100 = {
     id: "squat100", label: "スクワット100", oneSet: true, openAll: true,
     moves: [
-      { id: "squat100", name: "スクワット", reps: 100, note: "1セットで、いま表示している絵が全部開きます。途中で休んでもOK",
+      { id: "squat100", name: "スクワット", reps: 100, note: "1セットで、いま表示している絵が全部開きます。途中で休んでもOK", count: "立ち上がって1回。100回に届けば、途中で休んでも1セット。",
         how: YT + "SFnfYPktYBU" }
     ]
   };
@@ -1690,12 +1690,16 @@
         '<div class="move-note">' + m.note +
         (m.how ? ' <a class="how" href="' + m.how + '" target="_blank" rel="noopener">やり方 ↗</a>' : "") +
         "</div>" +
+        (m.count
+          ? '<div class="move-count"><span class="kind' + (m.sec ? " sec" : "") + '">' +
+            (m.sec ? m.sec + "秒キープ・タイマーで計る" : m.reps + "回・回数で数える") + "</span>" + m.count + "</div>"
+          : "") +
         (settings.debug && n > 0
           ? '<div class="move-sets">' + n + " セット記録済み</div>"
           : (!settings.debug && per > 1 && n > 0
             ? '<div class="move-sets">' + n + " / " + per + " セット</div>" : "")) +
         "</div>" +
-        '<div class="move-n">' + (m.sec ? m.sec + "<small>秒</small>" : m.reps + "<small>回</small>") + "</div></div>" +
+        '<div class="move-n">' + (m.sec ? m.sec + "<small>秒キープ</small>" : m.reps + "<small>回</small>") + "</div></div>" +
         '<div class="ctl">' +
         (m.sec ? '<button class="step tbtn" data-t="open">タイマー</button>' : "") +
         ctl + "</div>" +
