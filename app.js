@@ -40,6 +40,8 @@
 
   var ABS = {
     id: "abs", name: "ニートゥチェスト", reps: 25, note: "腹。どの回でも最後に",
+    step: "床に座って手を後ろにつき、脚を浮かせたまま膝を胸へ引き寄せて、また伸ばす。",
+    count: "引き寄せて伸ばすまでが1回。",
     how: YT + "OPeDVbIDcgg"
   };
 
@@ -50,14 +52,24 @@
   // sec がある種目は秒で数え、タイマーを出す。
   var CORE = {
     plank: { id: "plank", name: "プランク", sec: 30, note: "肘とつま先で支え、頭からかかとまでまっすぐ",
+      step: "肘とつま先で体を一直線に保ち、そのまま30秒キープ。腰を落とさない・反らさない。",
+      count: "回数ではなく秒数。タイマーで30秒はかる。",
       how: howTo("プランク 体幹") },
     glutebridge: { id: "glutebridge", name: "グルートブリッジ", reps: 15, note: "あお向けで膝を立て、お尻を締めて持ち上げる",
+      step: "あお向けで膝を立て、お尻を締めて腰を持ち上げ、肩から膝が一直線になったら上で1秒止める。勢いでバウンドさせない。",
+      count: "上で1秒止めて、ゆっくり下ろすまでが1回。",
       how: howTo("グルートブリッジ お尻") },
     birddog: { id: "birddog", name: "バードドッグ", reps: 20, note: "左右10回ずつ。四つんばいで、対角の手と脚をまっすぐ伸ばす",
+      step: "四つんばいで対角の手と脚を伸ばし、体がぶれないよう保ってから戻す。",
+      count: "伸ばして戻すまでが1回。左右交互に各10回（合わせて20回）。",
       how: howTo("バードドッグ 体幹") },
     deadbug: { id: "deadbug", name: "デッドバグ", reps: 20, note: "左右10回ずつ。あお向けで、対角の手と脚をゆっくり下ろす",
+      step: "あお向けで両腕を天井へ伸ばし、膝を90度に曲げて脚を上げる。対角の手と脚をゆっくり床すれすれまで下ろして戻す。",
+      count: "下ろして戻すまでが1回。左右交互に各10回（合わせて20回）。",
       how: howTo("デッドバグ 体幹") },
     sideplank: { id: "sideplank", name: "サイドプランク", sec: 20, note: "左右20秒ずつ。肘と足の側面で支え、体を一直線に",
+      step: "横向きになり、肘と足の側面で支えて頭からかかとまで一直線にし、そのままキープ。",
+      count: "回数ではなく秒数。片側20秒ずつ、タイマーではかる。",
       how: howTo("サイドプランク 体幹") }
   };
   // この日から締めの体幹を足す。前の日は3種目のまま完了を判定する
@@ -68,8 +80,12 @@
       id: "chest", label: "胸の日", core: CORE.plank,
       moves: [
         { id: "pushup", name: "腕立て伏せ", reps: 25, note: "きつければ膝をついて",
+          step: "手を肩幅より少し広くつき、頭からかかとをまっすぐにしたまま、胸が床すれすれまで下ろして押し上げる。",
+          count: "下ろして押し上げるまでが1回。",
           how: YT + "k4fsFKCp5iU" },
         { id: "kickback", name: "キックバック", reps: 50, note: "左右25回ずつ。ペットボトルを持つ",
+          step: "片手と片膝を台について上体を前に倒し、ペットボトルを持った腕の肘を体の横で固定して、肘から先を後ろへ伸ばす。",
+          count: "伸ばして戻すまでが1回。片方25回やってから反対側。",
           how: howTo("キックバック 二の腕") },
         ABS
       ]
@@ -78,8 +94,12 @@
       id: "legs", label: "脚の日", core: CORE.glutebridge,
       moves: [
         { id: "squat", name: "スクワット", reps: 25, note: "椅子に座って立つ動作から",
+          step: "足を肩幅に開き、椅子に座るようにお尻を後ろへ引いて、太ももが床と平行近くまで下ろしてから立ち上がる。",
+          count: "しゃがんで立つまでが1回。",
           how: YT + "SFnfYPktYBU" },
         { id: "calf", name: "カーフレイズ", reps: 40, note: "かかとの上げ下げ",
+          step: "壁などに軽く手を添えて立ち、かかとをできるだけ高く上げてから、ゆっくり下ろす。",
+          count: "上げて下ろすまでが1回。",
           how: howTo("カーフレイズ ふくらはぎ") },
         ABS
       ]
@@ -88,8 +108,12 @@
       id: "back", label: "背中の日", core: CORE.birddog,
       moves: [
         { id: "row", name: "ベントオーバーローイング", reps: 50, note: "左右25回ずつ。ペットボトルを持つ",
+          step: "片手と片膝を台について上体を前に倒し、ペットボトルを持った腕を下に垂らしてから、肘を天井へ引き上げる。",
+          count: "引き上げて下ろすまでが1回。片方25回やってから反対側。",
           how: howTo("ベントオーバーローイング 背中") },
         { id: "backext", name: "バックエクステンション", reps: 25, note: "うつ伏せから上体を反らす",
+          step: "うつ伏せになり、上体をゆっくり反らして持ち上げてから下ろす。反らしすぎない。",
+          count: "上げて下ろすまでが1回。",
           how: howTo("バックエクステンション 背中") },
         ABS
       ]
@@ -105,12 +129,20 @@
     id: "joint", label: "関節ケア",
     moves: [
       { id: "chairstand", name: "椅子から立ち座り", reps: 10, note: "高めの椅子で、膝がお尻より下がらない高さ。膝は肩幅に開いたまま。手で支えてOK",
+        step: "椅子に浅めに座り、足を肩幅に開いたまま立ち上がって、ゆっくり座る。",
+        count: "立って座るまでが1回。",
         how: rehabHow("椅子 立ち座り") },
       { id: "wallpush", name: "壁腕立て伏せ", reps: 15, note: "壁に手をつき、体はまっすぐ",
+        step: "壁から一歩離れて肩の高さに手をつき、肘を曲げて胸を壁に近づけてから押し戻す。",
+        count: "近づけて押し戻すまでが1回。",
         how: rehabHow("壁 腕立て") },
       { id: "sideleg", name: "脚の横上げ", reps: 20, note: "左右10回ずつ。椅子の背につかまり、つま先は正面のまま。下ろすとき反対の脚より内側へ入れない",
+        step: "椅子の背につかまってまっすぐ立ち、片脚を真横へ上げてから、ゆっくり下ろす。",
+        count: "上げて下ろすまでが1回。片方10回やってから反対側。",
         how: rehabHow("立位 脚 横上げ") },
       { id: "bridge", name: "ヒップリフト", reps: 10, note: "あお向けで膝を立て、膝を肩幅に開いたままお尻を持ち上げる",
+        step: "あお向けで膝を立てて肩幅に開き、お尻を持ち上げて上で1秒止めてから、ゆっくり下ろす。",
+        count: "下ろすまでが1回。",
         how: rehabHow("ブリッジ") }
     ]
   };
@@ -119,6 +151,8 @@
     id: "squat100", label: "スクワット100", oneSet: true, openAll: true,
     moves: [
       { id: "squat100", name: "スクワット", reps: 100, note: "1セットで、いま表示している絵が全部開きます。途中で休んでもOK",
+        step: "ふつうのスクワットと同じ形で、100回を1セットとして続ける。",
+        count: "しゃがんで立つまでが1回。100回で1セット。",
         how: YT + "SFnfYPktYBU" }
     ]
   };
@@ -1686,10 +1720,13 @@
       return '<div class="move' + (m.isCore ? " core" : "") + '" data-move="' + m.id + '">' +
         (m.isCore ? '<div class="core-label">締めの体幹</div>' : "") +
         '<div class="move-top"><div>' +
-        '<div class="move-name">' + m.name + "</div>" +
+        '<div class="move-name">' + m.name +
+        (m.sec ? ' <span class="unit sec">秒キープ</span>' : ' <span class="unit">回数</span>') + "</div>" +
         '<div class="move-note">' + m.note +
         (m.how ? ' <a class="how" href="' + m.how + '" target="_blank" rel="noopener">やり方 ↗</a>' : "") +
         "</div>" +
+        (m.step ? '<div class="move-how"><b>手順</b>' + m.step + "</div>" : "") +
+        (m.count ? '<div class="move-how"><b>数え方</b>' + m.count + "</div>" : "") +
         (settings.debug && n > 0
           ? '<div class="move-sets">' + n + " セット記録済み</div>"
           : (!settings.debug && per > 1 && n > 0
